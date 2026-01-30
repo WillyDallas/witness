@@ -1,0 +1,36 @@
+# Foundry
+cache/
+out/
+broadcast/
+forge-cache/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+lib/
+
+# Build artifacts
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+lcov.info
