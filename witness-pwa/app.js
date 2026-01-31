@@ -201,7 +201,7 @@ async function initCamera() {
         preview.srcObject = mediaStream;
 
         updateStatus('Ready to record');
-        startBtn.disabled = false;
+        recordBtn.disabled = false;
         return true;
 
     } catch (err) {
