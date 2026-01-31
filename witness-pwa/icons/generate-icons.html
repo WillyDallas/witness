@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; background: #1a1a1a; color: white; }
+        canvas { margin: 1rem; border: 1px solid #333; }
+        a { display: inline-block; margin: 0.5rem; padding: 0.5rem 1rem; background: #dc2626; color: white; text-decoration: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Witness Protocol Icon Generator</h1>
+    <p>Right-click each icon and "Save Image As" to download the PNG files.</p>
+
+    <h2>192x192</h2>
+    <canvas id="icon192" width="192" height="192"></canvas>
+    <br><a id="download192" download="icon-192.png">Download 192x192</a>
+
+    <h2>512x512</h2>
+    <canvas id="icon512" width="512" height="512"></canvas>
+    <br><a id="download512" download="icon-512.png">Download 512x512</a>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+
+            // Red background
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(0, 0, size, size);
+
+            // White "W"
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.55}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('W', size / 2, size / 2 + size * 0.05);
+        }
+
+        const canvas192 = document.getElementById('icon192');
+        const canvas512 = document.getElementById('icon512');
+
+        drawIcon(canvas192);
+        drawIcon(canvas512);
+
+        // Set download links
+        document.getElementById('download192').href = canvas192.toDataURL('image/png');
+        document.getElementById('download512').href = canvas512.toDataURL('image/png');
+    </script>
+</body>
+</html>
