@@ -16,6 +16,12 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let recordingStartTime = null;
 
+// Touch state
+let touchStartY = 0;
+let isHolding = false;
+let isLocked = false;
+const LOCK_THRESHOLD = 50; // pixels to swipe up to lock
+
 // Constants
 const STORAGE_KEY = 'witness_recordings';
 
