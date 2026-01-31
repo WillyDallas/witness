@@ -3,8 +3,8 @@
 
 // DOM Elements
 const preview = document.getElementById('preview');
-const startBtn = document.getElementById('start-btn');
-const stopBtn = document.getElementById('stop-btn');
+const recordBtn = document.getElementById('record-btn');
+const lockIndicator = document.getElementById('lock-indicator');
 const statusText = document.getElementById('status');
 const recordingIndicator = document.getElementById('recording-indicator');
 const recordingsList = document.getElementById('recordings-list');
