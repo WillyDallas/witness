@@ -1,0 +1,23 @@
+{
+  "name": "witness-pwa",
+  "version": "1.0.0",
+  "description": "Privacy-preserving evidence capture PWA",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["pwa", "privacy", "evidence", "witness"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "dependencies": {
+    "@privy-io/js-sdk-core": "^0.60.0",
+    "permissionless": "^0.2.57",
+    "viem": "^2.45.1"
+  }
+}
