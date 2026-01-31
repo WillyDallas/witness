@@ -36,6 +36,7 @@ let drawerOpen = false;
 
 // Lock hint state (only show once ever)
 const LOCK_HINT_KEY = 'witness_lock_hint_shown';
+let lockHintTimeout = null;
 
 // Constants
 const STORAGE_KEY = 'witness_recordings';
@@ -390,6 +391,13 @@ function handleTouchStart(e) {
     if (!localStorage.getItem(LOCK_HINT_KEY)) {
         showElement(lockIndicator);
         lockIndicator.classList.add('visible');
+
+        // Auto-hide after 2 seconds
+        lockHintTimeout = setTimeout(() => {
+            hideElement(lockIndicator);
+            lockIndicator.classList.remove('visible');
+            localStorage.setItem(LOCK_HINT_KEY, 'true');
+        }, 2000);
     }
 
     // Start recording
@@ -406,6 +414,13 @@ function handleTouchMove(e) {
     // Check if swiped up enough to lock
     if (deltaY > LOCK_THRESHOLD) {
         isLocked = true;
+
+        // Clear auto-hide timeout
+        if (lockHintTimeout) {
+            clearTimeout(lockHintTimeout);
+            lockHintTimeout = null;
+        }
+
         lockIndicator.classList.add('locked');
         updateStatus('Recording locked - tap to stop');
 
@@ -426,6 +441,12 @@ function handleTouchEnd(e) {
 
     isHolding = false;
     recordBtn.classList.remove('holding');
+
+    // Clear auto-hide timeout
+    if (lockHintTimeout) {
+        clearTimeout(lockHintTimeout);
+        lockHintTimeout = null;
+    }
 
     // If locked, keep recording; otherwise stop
     if (!isLocked) {
