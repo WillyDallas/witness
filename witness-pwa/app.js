@@ -33,8 +33,9 @@ let pendingFilename = null;
 
 // Drawer state
 let drawerOpen = false;
-let drawerTouchStartY = 0;
-let drawerTouchCurrentY = 0;
+
+// Lock hint state (only show once ever)
+const LOCK_HINT_KEY = 'witness_lock_hint_shown';
 
 // Constants
 const STORAGE_KEY = 'witness_recordings';
@@ -384,8 +385,12 @@ function handleTouchStart(e) {
 
     // Visual feedback
     recordBtn.classList.add('holding');
-    showElement(lockIndicator);
-    lockIndicator.classList.add('visible');
+
+    // Only show lock hint if never shown before
+    if (!localStorage.getItem(LOCK_HINT_KEY)) {
+        showElement(lockIndicator);
+        lockIndicator.classList.add('visible');
+    }
 
     // Start recording
     startRecording();
@@ -403,6 +408,15 @@ function handleTouchMove(e) {
         isLocked = true;
         lockIndicator.classList.add('locked');
         updateStatus('Recording locked - tap to stop');
+
+        // Mark hint as shown so it never appears again
+        localStorage.setItem(LOCK_HINT_KEY, 'true');
+
+        // Hide the indicator after a moment
+        setTimeout(() => {
+            hideElement(lockIndicator);
+            lockIndicator.classList.remove('visible', 'locked');
+        }, 800);
     }
 }
 
@@ -415,6 +429,9 @@ function handleTouchEnd(e) {
 
     // If locked, keep recording; otherwise stop
     if (!isLocked) {
+        // Mark hint as shown (they've seen it once)
+        localStorage.setItem(LOCK_HINT_KEY, 'true');
+
         hideElement(lockIndicator);
         lockIndicator.classList.remove('visible');
         if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -496,38 +513,9 @@ drawerToggle.addEventListener('click', () => {
     }
 });
 
-// Close drawer when clicking backdrop
+// Close drawer when clicking backdrop or handle
 drawerBackdrop.addEventListener('click', closeDrawer);
-
-// Swipe down to close drawer
-drawerHandle.addEventListener('touchstart', (e) => {
-    drawerTouchStartY = e.touches[0].clientY;
-    drawerTouchCurrentY = drawerTouchStartY;
-    recordingsDrawer.style.transition = 'none';
-}, { passive: true });
-
-drawerHandle.addEventListener('touchmove', (e) => {
-    drawerTouchCurrentY = e.touches[0].clientY;
-    const deltaY = drawerTouchCurrentY - drawerTouchStartY;
-
-    // Only allow dragging down
-    if (deltaY > 0) {
-        recordingsDrawer.style.transform = `translateY(${deltaY}px)`;
-    }
-}, { passive: true });
-
-drawerHandle.addEventListener('touchend', () => {
-    recordingsDrawer.style.transition = '';
-    const deltaY = drawerTouchCurrentY - drawerTouchStartY;
-
-    // If dragged down more than 100px, close the drawer
-    if (deltaY > 100) {
-        closeDrawer();
-    } else {
-        // Snap back open
-        recordingsDrawer.style.transform = '';
-    }
-});
+drawerHandle.addEventListener('click', closeDrawer);
 
 // ============================================
 // Initialization
