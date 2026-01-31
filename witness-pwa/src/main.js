@@ -1,5 +1,11 @@
-// Witness Protocol - Main Application
-'use strict';
+/**
+ * Witness Protocol PWA - Main Application
+ *
+ * This module handles video capture with touch-hold recording.
+ * Authentication and encryption are handled by the auth modules.
+ */
+import { initLoginModal } from './ui/loginModal.js';
+import { isReady, subscribeToAuth } from './lib/authState.js';
 
 // DOM Elements
 const preview = document.getElementById('preview');
@@ -41,15 +47,7 @@ let lockHintTimeout = null;
 // Constants
 const STORAGE_KEY = 'witness_recordings';
 
-// ============================================
-// Service Worker Registration
-// ============================================
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('Service worker registered:', reg.scope))
-        .catch(err => console.error('Service worker registration failed:', err));
-}
+// Note: Service worker is registered by vite-plugin-pwa
 
 // ============================================
 // Utility Functions
@@ -543,8 +541,28 @@ drawerHandle.addEventListener('click', closeDrawer);
 // ============================================
 
 async function init() {
-    renderRecordingsList();
-    await initCamera();
+    // Initialize login modal and check session
+    const authenticated = await initLoginModal();
+
+    // Subscribe to auth state changes
+    subscribeToAuth((state) => {
+        if (state.authenticated && state.encryptionKey) {
+            // User just completed authentication
+            // Enable camera if not already initialized
+            if (!mediaStream) {
+                initCamera();
+            }
+        }
+    });
+
+    // Only initialize camera if already authenticated
+    if (authenticated) {
+        renderRecordingsList();
+        await initCamera();
+    } else {
+        // Camera will be initialized after login completes
+        renderRecordingsList();
+    }
 }
 
 // Start the app
