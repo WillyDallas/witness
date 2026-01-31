@@ -5,7 +5,7 @@
 
 # Dependencies
 node_modules/
-lib/
+/lib/
 
 # Build artifacts
 dist/
