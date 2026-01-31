@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <!-- Controls -->
+        <!-- Controls (floating over video) -->
         <div class="controls">
             <p id="status" class="status-text">Initializing camera...</p>
 
@@ -45,15 +45,29 @@
                     Save Video
                 </button>
             </div>
+
+            <!-- Drawer toggle -->
+            <button id="drawer-toggle" class="drawer-toggle">
+                <span class="drawer-toggle-line"></span>
+                <span class="drawer-toggle-text">Recordings</span>
+            </button>
         </div>
 
-        <!-- Recordings List -->
-        <div class="recordings-section">
-            <h2>Recordings</h2>
-            <ul id="recordings-list" class="recordings-list">
-                <!-- Populated by JavaScript -->
-            </ul>
-            <p id="no-recordings" class="no-recordings">No recordings yet</p>
+        <!-- Drawer Backdrop -->
+        <div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+        <!-- Recordings Drawer -->
+        <div id="recordings-drawer" class="recordings-drawer">
+            <div class="drawer-handle" id="drawer-handle">
+                <span class="drawer-handle-bar"></span>
+            </div>
+            <div class="drawer-content">
+                <h2>Recordings</h2>
+                <ul id="recordings-list" class="recordings-list">
+                    <!-- Populated by JavaScript -->
+                </ul>
+                <p id="no-recordings" class="no-recordings">No recordings yet</p>
+            </div>
         </div>
     </div>
 

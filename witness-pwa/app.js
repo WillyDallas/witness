@@ -10,6 +10,10 @@ const statusText = document.getElementById('status');
 const recordingIndicator = document.getElementById('recording-indicator');
 const recordingsList = document.getElementById('recordings-list');
 const noRecordingsMsg = document.getElementById('no-recordings');
+const drawerToggle = document.getElementById('drawer-toggle');
+const recordingsDrawer = document.getElementById('recordings-drawer');
+const drawerBackdrop = document.getElementById('drawer-backdrop');
+const drawerHandle = document.getElementById('drawer-handle');
 
 // State
 let mediaStream = null;
@@ -26,6 +30,11 @@ const LOCK_THRESHOLD = 50; // pixels to swipe up to lock
 // Pending video for save
 let pendingBlob = null;
 let pendingFilename = null;
+
+// Drawer state
+let drawerOpen = false;
+let drawerTouchStartY = 0;
+let drawerTouchCurrentY = 0;
 
 // Constants
 const STORAGE_KEY = 'witness_recordings';
@@ -459,6 +468,64 @@ saveBtn.addEventListener('click', async () => {
 
     if (saved) {
         updateStatus('Ready to record');
+    }
+});
+
+// ============================================
+// Drawer Functions
+// ============================================
+
+function openDrawer() {
+    drawerOpen = true;
+    recordingsDrawer.classList.add('open');
+    drawerBackdrop.classList.add('visible');
+}
+
+function closeDrawer() {
+    drawerOpen = false;
+    recordingsDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('visible');
+}
+
+// Drawer toggle button
+drawerToggle.addEventListener('click', () => {
+    if (drawerOpen) {
+        closeDrawer();
+    } else {
+        openDrawer();
+    }
+});
+
+// Close drawer when clicking backdrop
+drawerBackdrop.addEventListener('click', closeDrawer);
+
+// Swipe down to close drawer
+drawerHandle.addEventListener('touchstart', (e) => {
+    drawerTouchStartY = e.touches[0].clientY;
+    drawerTouchCurrentY = drawerTouchStartY;
+    recordingsDrawer.style.transition = 'none';
+}, { passive: true });
+
+drawerHandle.addEventListener('touchmove', (e) => {
+    drawerTouchCurrentY = e.touches[0].clientY;
+    const deltaY = drawerTouchCurrentY - drawerTouchStartY;
+
+    // Only allow dragging down
+    if (deltaY > 0) {
+        recordingsDrawer.style.transform = `translateY(${deltaY}px)`;
+    }
+}, { passive: true });
+
+drawerHandle.addEventListener('touchend', () => {
+    recordingsDrawer.style.transition = '';
+    const deltaY = drawerTouchCurrentY - drawerTouchStartY;
+
+    // If dragged down more than 100px, close the drawer
+    if (deltaY > 100) {
+        closeDrawer();
+    } else {
+        // Snap back open
+        recordingsDrawer.style.transform = '';
     }
 });
 
