@@ -676,3 +676,23 @@ html, body {
     font-size: 12px;
     font-family: monospace;
 }
+
+/* ==========================================
+   DRAWER FOOTER
+   ========================================== */
+
+.drawer-footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-logout {
+    width: 100%;
+    text-align: center;
+    color: #ef4444;
+}
+
+.btn-logout:hover {
+    color: #f87171;
+}

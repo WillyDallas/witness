@@ -4,8 +4,9 @@
  * This module handles video capture with touch-hold recording.
  * Authentication and encryption are handled by the auth modules.
  */
-import { initLoginModal } from './ui/loginModal.js';
-import { isReady, subscribeToAuth } from './lib/authState.js';
+import { initLoginModal, showLoginModal } from './ui/loginModal.js';
+import { isReady, subscribeToAuth, clearAuthState } from './lib/authState.js';
+import { logout } from './lib/privy.js';
 
 // DOM Elements
 const preview = document.getElementById('preview');
@@ -20,6 +21,7 @@ const drawerToggle = document.getElementById('drawer-toggle');
 const recordingsDrawer = document.getElementById('recordings-drawer');
 const drawerBackdrop = document.getElementById('drawer-backdrop');
 const drawerHandle = document.getElementById('drawer-handle');
+const logoutBtn = document.getElementById('logout-btn');
 
 // State
 let mediaStream = null;
@@ -535,6 +537,31 @@ drawerToggle.addEventListener('click', () => {
 // Close drawer when clicking backdrop or handle
 drawerBackdrop.addEventListener('click', closeDrawer);
 drawerHandle.addEventListener('click', closeDrawer);
+
+// Logout button handler
+logoutBtn.addEventListener('click', async () => {
+    // Stop any active recording
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+    }
+
+    // Stop camera
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+        preview.srcObject = null;
+    }
+
+    // Clear auth state and logout from Privy
+    await logout();
+    clearAuthState();
+
+    // Show login modal
+    showLoginModal();
+
+    // Close drawer
+    closeDrawer();
+});
 
 // ============================================
 // Initialization
