@@ -15,6 +15,67 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Login Modal (shown before camera access) -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-content login-modal">
+            <div class="modal-header">
+                <h1 class="app-title">Witness Protocol</h1>
+                <p class="app-subtitle">Privacy-preserving evidence capture</p>
+            </div>
+
+            <div id="login-step-email" class="login-step">
+                <p class="login-instruction">Enter your email to get started</p>
+                <input
+                    type="email"
+                    id="email-input"
+                    class="login-input"
+                    placeholder="you@example.com"
+                    autocomplete="email"
+                    inputmode="email"
+                />
+                <button id="send-code-btn" class="btn btn-primary btn-full">
+                    Continue
+                </button>
+            </div>
+
+            <div id="login-step-code" class="login-step hidden">
+                <p class="login-instruction">
+                    Enter the 6-digit code sent to<br>
+                    <span id="email-display" class="email-display"></span>
+                </p>
+                <input
+                    type="text"
+                    id="code-input"
+                    class="login-input code-input"
+                    placeholder="000000"
+                    maxlength="6"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    autocomplete="one-time-code"
+                />
+                <button id="verify-code-btn" class="btn btn-primary btn-full">
+                    Verify
+                </button>
+                <button id="back-to-email-btn" class="btn btn-link">
+                    Use a different email
+                </button>
+            </div>
+
+            <div id="login-step-loading" class="login-step hidden">
+                <div class="loading-spinner"></div>
+                <p id="loading-message" class="loading-message">Setting up your wallet...</p>
+            </div>
+
+            <p id="login-error" class="login-error hidden"></p>
+        </div>
+    </div>
+
+    <!-- Wallet Status Indicator (shown when authenticated) -->
+    <div id="wallet-indicator" class="wallet-indicator hidden">
+        <span class="wallet-dot"></span>
+        <span id="wallet-address" class="wallet-address"></span>
+    </div>
+
     <div class="app-container">
         <!-- Camera Preview -->
         <div class="video-container">
