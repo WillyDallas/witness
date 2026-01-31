@@ -153,15 +153,17 @@ function renderRecordingsList() {
 
 function setRecordingUI(isRecording) {
     if (isRecording) {
-        hideElement(startBtn);
-        showElement(stopBtn);
+        recordBtn.classList.add('recording');
         showElement(recordingIndicator);
-        updateStatus('Recording...');
+        updateStatus(isLocked ? 'Recording (locked) - tap to stop' : 'Recording...');
     } else {
-        showElement(startBtn);
-        hideElement(stopBtn);
+        recordBtn.classList.remove('recording', 'holding');
         hideElement(recordingIndicator);
-        startBtn.disabled = false;
+        hideElement(lockIndicator);
+        lockIndicator.classList.remove('visible', 'locked');
+        recordBtn.disabled = false;
+        isHolding = false;
+        isLocked = false;
     }
 }
 
