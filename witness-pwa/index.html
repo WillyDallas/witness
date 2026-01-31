@@ -32,12 +32,15 @@
             <p id="status" class="status-text">Initializing camera...</p>
 
             <div class="button-group">
-                <button id="start-btn" class="btn btn-record" disabled>
-                    Start Recording
-                </button>
-                <button id="stop-btn" class="btn btn-stop hidden">
-                    Stop Recording
-                </button>
+                <div class="record-button-container">
+                    <button id="record-btn" class="btn btn-record" disabled>
+                        <span class="record-btn-icon"></span>
+                    </button>
+                    <div id="lock-indicator" class="lock-indicator hidden">
+                        <span class="lock-arrow">↑</span>
+                        <span class="lock-text">Slide to lock</span>
+                    </div>
+                </div>
             </div>
         </div>
 
