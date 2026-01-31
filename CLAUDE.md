@@ -10,17 +10,19 @@ Build a progressive web app (PWA) that captures video/audio/GPS, stores encrypte
 
 ## Current Milestone
 
-**Milestone 1: Basic PWA** - Simple video capture with pure HTML/CSS/JavaScript. No frameworks, no build tools. Located in `witness-pwa/`.
+**Phase 1: Identity & Wallet** - Privy authentication with embedded wallet, Kernel smart account, and encryption key derivation. Located in `witness-pwa/`.
 
 ## Tech Stack
 
-### Milestone 1 (Current)
-- Pure HTML/CSS/JavaScript
-- Browser APIs: MediaRecorder, getUserMedia, Service Worker, localStorage
+### Current Implementation
+- Vite (build tooling)
+- `@privy-io/js-sdk-core` (email auth + embedded wallet)
+- `viem` (Ethereum client)
+- `permissionless` (Kernel smart account + Pimlico paymaster)
+- Web Crypto API (AES-256-GCM encryption key derivation)
+- Browser APIs: MediaRecorder, getUserMedia, localStorage
 
-### Future Milestones
-- Expo (React Native + Web)
-- Privy (Smart Wallets + Passkey Auth)
+### Future Phases
 - IPFS/Pinata (Decentralized Storage)
 - Matrix Protocol (Coordination Layer)
 - EAS on Base Sepolia (Attestations)
@@ -56,16 +58,23 @@ https://witness.squirrlylabs.xyz
 - **Web Root**: `/var/www/witness/`
 - **Web Server**: nginx with Let's Encrypt SSL
 
+### Build for Production
+```bash
+cd witness-pwa
+npm run build
+```
+This outputs to `witness-pwa/dist/`.
+
 ### Deploy Command
 From the project root:
 ```bash
-rsync -avz witness-pwa/ root@46.62.231.168:/var/www/witness/
+rsync -avz witness-pwa/dist/ root@46.62.231.168:/var/www/witness/
 ```
 
 ### After Deploying Changes
-1. Bump `CACHE_NAME` version in `sw.js` (e.g., `witness-v4` → `witness-v5`)
+1. Run `npm run build` to create production bundle
 2. Deploy with rsync command above
-3. Users need to refresh or clear cache to get updates
+3. vite-plugin-pwa handles service worker updates automatically
 4. For PWA home screen apps: users may need to delete and re-add
 
 ### nginx Configuration
@@ -84,7 +93,12 @@ Located at `/etc/nginx/sites-available/witness`. Key points:
 
 ### Testing Locally
 ```bash
-cd witness-pwa && python3 -m http.server 8080
-# Open http://localhost:8080
+cd witness-pwa && npm run dev
+# Open http://localhost:5173
 ```
 Camera APIs require localhost or HTTPS.
+
+### Environment Setup
+Copy `.env.example` to `.env` and fill in your API keys:
+- **Privy**: Get App ID and Client ID from https://dashboard.privy.io
+- **Pimlico**: Get API Key from https://dashboard.pimlico.io
