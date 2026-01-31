@@ -5,6 +5,7 @@
 const preview = document.getElementById('preview');
 const recordBtn = document.getElementById('record-btn');
 const lockIndicator = document.getElementById('lock-indicator');
+const saveBtn = document.getElementById('save-btn');
 const statusText = document.getElementById('status');
 const recordingIndicator = document.getElementById('recording-indicator');
 const recordingsList = document.getElementById('recordings-list');
@@ -21,6 +22,10 @@ let touchStartY = 0;
 let isHolding = false;
 let isLocked = false;
 const LOCK_THRESHOLD = 50; // pixels to swipe up to lock
+
+// Pending video for save
+let pendingBlob = null;
+let pendingFilename = null;
 
 // Constants
 const STORAGE_KEY = 'witness_recordings';
@@ -292,11 +297,14 @@ async function handleRecordingStop() {
     renderRecordingsList();
     setRecordingUI(false);
 
-    // Share or download the video
-    const saved = await shareOrDownload(blob, filename);
-    if (saved) {
-        updateStatus('Recording saved: ' + filename);
-    }
+    // Store blob for save button (iOS requires user gesture for share)
+    pendingBlob = blob;
+    pendingFilename = filename;
+
+    // Show save button and prompt user
+    showElement(saveBtn);
+    hideElement(recordBtn);
+    updateStatus('Tap "Save Video" to save to Photos');
 
     // Clear chunks
     recordedChunks = [];
@@ -434,6 +442,23 @@ recordBtn.addEventListener('click', (e) => {
         // For desktop, auto-lock since there's no hold gesture
         isLocked = true;
         updateStatus('Recording - click to stop');
+    }
+});
+
+// Save button handler (requires fresh user gesture for iOS share)
+saveBtn.addEventListener('click', async () => {
+    if (!pendingBlob || !pendingFilename) return;
+
+    const saved = await shareOrDownload(pendingBlob, pendingFilename);
+
+    // Reset state
+    pendingBlob = null;
+    pendingFilename = null;
+    hideElement(saveBtn);
+    showElement(recordBtn);
+
+    if (saved) {
+        updateStatus('Ready to record');
     }
 });
 

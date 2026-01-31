@@ -170,6 +170,16 @@ html, body {
     background-color: #e5e5e5;
 }
 
+.btn-save {
+    background-color: #22c55e;
+    color: var(--text-light);
+    min-width: 140px;
+}
+
+.btn-save:hover {
+    background-color: #16a34a;
+}
+
 /* ============================================
    Record Button (Touch-Hold)
 ============================================ */
