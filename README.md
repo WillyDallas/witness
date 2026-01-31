@@ -34,12 +34,14 @@ docs/
 
 ## Development Milestones
 
-### Milestone 1: Basic PWA (Current)
+### Milestone 1: Basic PWA ✅ Complete
 - [x] Camera/microphone access
 - [x] Video recording
-- [x] Local download
-- [ ] PWA installation support
-- [ ] Recordings list (localStorage)
+- [x] Local download (Web Share API + fallback)
+- [x] PWA installation support (manifest + service worker)
+- [x] Recordings list (localStorage)
+
+**Live Demo:** https://witness.squirrlylabs.xyz
 
 ### Future Milestones
 - GPS tracking and location metadata
@@ -64,16 +66,19 @@ docs/
 
 ## Getting Started
 
+Try the live version at https://witness.squirrlylabs.xyz, or run locally:
+
 ```bash
-# Milestone 1: Serve the PWA locally
 cd witness-pwa
-python -m http.server 8000
-# Open https://localhost:8000 (camera requires HTTPS or localhost)
+python3 -m http.server 8080
+# Open http://localhost:8080 (camera requires HTTPS or localhost)
 ```
 
 ## Deployment
 
-Target: `https://witness.squirrlylabs.xyz`
+**Production:** https://witness.squirrlylabs.xyz
+
+The PWA is deployed on a Hetzner VPS with nginx and Let's Encrypt SSL. Install it on your phone by visiting the URL and using "Add to Home Screen".
 
 ## License
 
