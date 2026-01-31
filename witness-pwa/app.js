@@ -346,8 +346,96 @@ function downloadBlob(blob, filename) {
 // Event Listeners
 // ============================================
 
-startBtn.addEventListener('click', startRecording);
-stopBtn.addEventListener('click', stopRecording);
+// Track if touch event just fired (to prevent ghost clicks)
+let touchHandled = false;
+
+// Touch event handlers for hold-to-record
+function handleTouchStart(e) {
+    if (recordBtn.disabled) return;
+    e.preventDefault();
+    touchHandled = true;
+
+    const touch = e.touches[0];
+    touchStartY = touch.clientY;
+    isHolding = true;
+
+    // If already recording (locked mode), stop on tap
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+        return;
+    }
+
+    // Visual feedback
+    recordBtn.classList.add('holding');
+    showElement(lockIndicator);
+    lockIndicator.classList.add('visible');
+
+    // Start recording
+    startRecording();
+}
+
+function handleTouchMove(e) {
+    if (!isHolding || isLocked) return;
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    const deltaY = touchStartY - touch.clientY;
+
+    // Check if swiped up enough to lock
+    if (deltaY > LOCK_THRESHOLD) {
+        isLocked = true;
+        lockIndicator.classList.add('locked');
+        updateStatus('Recording locked - tap to stop');
+    }
+}
+
+function handleTouchEnd(e) {
+    if (!isHolding) return;
+    e.preventDefault();
+
+    isHolding = false;
+    recordBtn.classList.remove('holding');
+
+    // If locked, keep recording; otherwise stop
+    if (!isLocked) {
+        hideElement(lockIndicator);
+        lockIndicator.classList.remove('visible');
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            stopRecording();
+        }
+    }
+}
+
+function handleTouchCancel(e) {
+    // Treat cancel same as end
+    handleTouchEnd(e);
+}
+
+// Attach touch listeners
+recordBtn.addEventListener('touchstart', handleTouchStart, { passive: false });
+recordBtn.addEventListener('touchmove', handleTouchMove, { passive: false });
+recordBtn.addEventListener('touchend', handleTouchEnd, { passive: false });
+recordBtn.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+
+// Fallback click handler for desktop/mouse
+recordBtn.addEventListener('click', (e) => {
+    // Skip if touch event just handled this
+    if (touchHandled) {
+        touchHandled = false;
+        return;
+    }
+
+    if (recordBtn.disabled) return;
+
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+    } else {
+        startRecording();
+        // For desktop, auto-lock since there's no hold gesture
+        isLocked = true;
+        updateStatus('Recording - click to stop');
+    }
+});
 
 // ============================================
 // Initialization
