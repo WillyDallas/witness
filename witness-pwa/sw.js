@@ -1,7 +1,7 @@
 // Service Worker for Witness Protocol PWA
 // TODO: Implement caching strategy
 
-const CACHE_NAME = 'witness-v4';
+const CACHE_NAME = 'witness-v5';
 const ASSETS = [
     '/',
     '/index.html',
