@@ -13,6 +13,7 @@ import { initLoginModal, showLoginModal } from './ui/loginModal.js';
 import { showEncryptionTest } from './ui/encryptionTest.js';
 import { showGroupsModal } from './ui/groupsModal.js';
 import { showUploadModal } from './ui/uploadModal.js';
+import { showContentBrowser } from './ui/contentBrowser.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
@@ -567,6 +568,15 @@ if (uploadBtnDrawer) {
     uploadBtnDrawer.addEventListener('click', () => {
         closeDrawer();
         showUploadModal();
+    });
+}
+
+// Evidence browser button handler
+const evidenceBtn = document.getElementById('evidence-btn');
+if (evidenceBtn) {
+    evidenceBtn.addEventListener('click', () => {
+        closeDrawer();
+        showContentBrowser();
     });
 }
 
