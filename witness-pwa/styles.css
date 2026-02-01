@@ -2219,3 +2219,35 @@ html, body {
 .summary-actions .btn {
     width: 100%;
 }
+
+/* ============================================
+   RECORDING GROUP SELECT MODAL
+============================================ */
+
+.recording-group-modal {
+    max-width: 400px;
+}
+
+.recording-group-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.recording-group-modal .modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-light);
+}
+
+.group-select-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+    line-height: 1.4;
+}
+
+.recording-group-modal .modal-footer {
+    margin-top: 1.5rem;
+}
