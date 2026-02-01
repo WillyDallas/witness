@@ -9,6 +9,10 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
