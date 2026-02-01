@@ -155,6 +155,44 @@
         </div>
     </div>
 
+    <!-- Recording Screen (fullscreen overlay, hidden by default) -->
+    <div id="recording-screen" class="recording-screen hidden">
+        <!-- Camera Preview (fullscreen) -->
+        <video id="recording-preview" autoplay muted playsinline></video>
+
+        <!-- Status Bar (minimal overlay at top) -->
+        <div class="recording-status-bar">
+            <div class="recording-status-left">
+                <span class="recording-dot"></span>
+                <span id="recording-time" class="recording-time">0:00</span>
+            </div>
+            <div class="recording-status-right">
+                <span id="chunk-status" class="chunk-status">
+                    <span class="chunk-icon">✓</span>
+                    <span id="chunk-count">0</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Stop Button (centered at bottom) -->
+        <button id="stop-recording-btn" class="stop-recording-btn">
+            <span class="stop-icon"></span>
+        </button>
+    </div>
+
+    <!-- Recording Summary Overlay -->
+    <div id="recording-summary" class="recording-summary hidden">
+        <div class="summary-content">
+            <div class="summary-icon">✓</div>
+            <h3 id="summary-title">Recording Complete</h3>
+            <p id="summary-details">15 chunks uploaded, all confirmed</p>
+            <div class="summary-actions">
+                <button id="view-recording-btn" class="btn btn-primary">View Recording</button>
+                <button id="dismiss-summary-btn" class="btn btn-secondary">Done</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>
