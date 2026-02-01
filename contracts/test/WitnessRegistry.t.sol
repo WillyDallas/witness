@@ -96,4 +96,71 @@ contract WitnessRegistryTest is Test {
         vm.expectRevert(WitnessRegistry.GroupAlreadyExists.selector);
         registry.createGroup(TEST_GROUP_ID);
     }
+
+    // ============================================
+    // GROUP JOINING TESTS
+    // ============================================
+
+    function test_JoinGroup_Success() public {
+        // Alice creates group
+        vm.prank(alice);
+        registry.register();
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID);
+
+        // Bob joins
+        vm.prank(bob);
+        registry.register();
+        vm.prank(bob);
+        registry.joinGroup(TEST_GROUP_ID);
+
+        assertTrue(registry.groupMembers(TEST_GROUP_ID, bob));
+    }
+
+    function test_JoinGroup_EmitsEvent() public {
+        vm.prank(alice);
+        registry.register();
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID);
+
+        vm.prank(bob);
+        registry.register();
+
+        vm.prank(bob);
+        vm.expectEmit(true, true, false, true);
+        emit WitnessRegistry.GroupJoined(TEST_GROUP_ID, bob, uint64(block.timestamp));
+        registry.joinGroup(TEST_GROUP_ID);
+    }
+
+    function test_JoinGroup_RevertIfNotRegistered() public {
+        vm.prank(alice);
+        registry.register();
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID);
+
+        vm.prank(bob);
+        vm.expectRevert(WitnessRegistry.NotRegistered.selector);
+        registry.joinGroup(TEST_GROUP_ID);
+    }
+
+    function test_JoinGroup_RevertIfGroupDoesNotExist() public {
+        vm.prank(bob);
+        registry.register();
+
+        vm.prank(bob);
+        vm.expectRevert(WitnessRegistry.GroupDoesNotExist.selector);
+        registry.joinGroup(TEST_GROUP_ID);
+    }
+
+    function test_JoinGroup_RevertIfAlreadyMember() public {
+        vm.prank(alice);
+        registry.register();
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID);
+
+        // Alice tries to join again (already member as creator)
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.AlreadyMember.selector);
+        registry.joinGroup(TEST_GROUP_ID);
+    }
 }

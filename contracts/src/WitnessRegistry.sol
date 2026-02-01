@@ -114,4 +114,29 @@ contract WitnessRegistry {
 
         emit GroupCreated(groupId, msg.sender, uint64(block.timestamp));
     }
+
+    /**
+     * @notice Join an existing group
+     * @param groupId The group to join
+     * @dev Caller must be registered and group must exist
+     */
+    function joinGroup(bytes32 groupId) external {
+        if (!registered[msg.sender]) revert NotRegistered();
+        if (groups[groupId].createdAt == 0) revert GroupDoesNotExist();
+        if (groupMembers[groupId][msg.sender]) revert AlreadyMember();
+
+        groupMembers[groupId][msg.sender] = true;
+        _groupMemberList[groupId].push(msg.sender);
+
+        emit GroupJoined(groupId, msg.sender, uint64(block.timestamp));
+    }
+
+    /**
+     * @notice Get the number of members in a group
+     * @param groupId The group to query
+     * @return The number of members
+     */
+    function getGroupMemberCount(bytes32 groupId) external view returns (uint256) {
+        return _groupMemberList[groupId].length;
+    }
 }
