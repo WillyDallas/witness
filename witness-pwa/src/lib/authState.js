@@ -3,6 +3,9 @@
  * Centralized state for authentication, wallet, and encryption key
  */
 
+import { clearCachedSignature } from './encryption.js';
+import { clearSecureStorage } from './storage.js';
+
 // Auth state (in-memory, lost on page refresh - session restored via Privy)
 const authState = {
   initialized: false,
@@ -107,5 +110,10 @@ export function clearAuthState() {
   authState.smartAccountClient = null;
   authState.smartAccountAddress = null;
   authState.encryptionKey = null;
+
+  // Clear cached signature and secure storage
+  clearCachedSignature();
+  clearSecureStorage();
+
   notifyListeners();
 }

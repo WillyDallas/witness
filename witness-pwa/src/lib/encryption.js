@@ -67,7 +67,7 @@ async function requestKeyDerivationSignature(provider, walletAddress) {
  * @param {string} hex - Hex string (with or without 0x prefix)
  * @returns {Uint8Array}
  */
-function hexToBytes(hex) {
+export function hexToBytes(hex) {
   const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
   const bytes = new Uint8Array(cleanHex.length / 2);
   for (let i = 0; i < bytes.length; i++) {
@@ -203,6 +203,125 @@ export async function sha256(data) {
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============================================
+// Group Secret Management
+// ============================================
+
+/**
+ * Generate a random 32-byte group secret
+ * @returns {Uint8Array} Random secret bytes
+ */
+export function generateGroupSecret() {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+
+/**
+ * Derive group ID from group secret using SHA-256
+ * Group ID = first 32 bytes of SHA-256(secret) as hex with 0x prefix
+ * @param {Uint8Array} secret - Group secret bytes
+ * @returns {Promise<string>} Group ID as bytes32 hex (0x-prefixed)
+ */
+export async function deriveGroupId(secret) {
+  const hashBuffer = await crypto.subtle.digest('SHA-256', secret);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Convert Uint8Array to hex string
+ * @param {Uint8Array} bytes - Bytes to convert
+ * @returns {string} Hex string without 0x prefix
+ */
+export function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============================================
+// Key Wrapping (for multi-group encryption)
+// ============================================
+
+/**
+ * Derive an AES-256-GCM key from group secret for key wrapping
+ * @param {Uint8Array} groupSecret - 32-byte group secret
+ * @returns {Promise<CryptoKey>} AES-GCM key for wrapping
+ */
+async function deriveGroupKey(groupSecret) {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    groupSecret,
+    'HKDF',
+    false,
+    ['deriveKey']
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      salt: new TextEncoder().encode('witness-protocol:group-key'),
+      info: new TextEncoder().encode('AES-256-GCM-group-wrapping'),
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['wrapKey', 'unwrapKey']
+  );
+}
+
+/**
+ * Wrap a content key with a group secret
+ * Content is encrypted with a random key, then that key is wrapped for each group
+ * @param {CryptoKey} contentKey - The key used to encrypt content
+ * @param {Uint8Array} groupSecret - Group secret to wrap with
+ * @returns {Promise<{iv: Uint8Array, wrappedKey: ArrayBuffer}>}
+ */
+export async function wrapContentKey(contentKey, groupSecret) {
+  const groupKey = await deriveGroupKey(groupSecret);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const wrappedKey = await crypto.subtle.wrapKey(
+    'raw',
+    contentKey,
+    groupKey,
+    { name: 'AES-GCM', iv }
+  );
+
+  return { iv, wrappedKey };
+}
+
+/**
+ * Unwrap a content key using a group secret
+ * @param {Uint8Array} iv - IV used during wrapping
+ * @param {ArrayBuffer} wrappedKey - The wrapped key
+ * @param {Uint8Array} groupSecret - Group secret to unwrap with
+ * @returns {Promise<CryptoKey>} The unwrapped content key
+ */
+export async function unwrapContentKey(iv, wrappedKey, groupSecret) {
+  const groupKey = await deriveGroupKey(groupSecret);
+
+  return crypto.subtle.unwrapKey(
+    'raw',
+    wrappedKey,
+    groupKey,
+    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+/**
+ * Generate a random content key for encrypting media
+ * @returns {Promise<CryptoKey>} Extractable AES-256-GCM key
+ */
+export async function generateContentKey() {
+  return crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true, // Extractable so we can wrap it
+    ['encrypt', 'decrypt']
+  );
 }
 
 // ============================================

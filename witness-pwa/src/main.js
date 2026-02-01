@@ -10,6 +10,7 @@ import { Buffer } from 'buffer';
 globalThis.Buffer = Buffer;
 
 import { initLoginModal, showLoginModal } from './ui/loginModal.js';
+import { showEncryptionTest } from './ui/encryptionTest.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
@@ -28,6 +29,7 @@ const recordingsDrawer = document.getElementById('recordings-drawer');
 const drawerBackdrop = document.getElementById('drawer-backdrop');
 const drawerHandle = document.getElementById('drawer-handle');
 const logoutBtn = document.getElementById('logout-btn');
+const encryptionTestBtn = document.getElementById('encryption-test-btn');
 const registrationContainer = document.getElementById('registration-container');
 
 // State
@@ -547,6 +549,12 @@ drawerToggle.addEventListener('click', () => {
 // Close drawer when clicking backdrop or handle
 drawerBackdrop.addEventListener('click', closeDrawer);
 drawerHandle.addEventListener('click', closeDrawer);
+
+// Encryption test button handler
+encryptionTestBtn.addEventListener('click', () => {
+    closeDrawer();
+    showEncryptionTest();
+});
 
 // Logout button handler
 logoutBtn.addEventListener('click', async () => {

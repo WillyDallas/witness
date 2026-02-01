@@ -231,8 +231,14 @@ export async function getOrCreateWallet(user) {
  */
 export async function logout() {
   const privy = getPrivy();
-  if (privy) {
-    await privy.logout();
+  const cachedUser = getCachedUser();
+
+  if (privy && cachedUser?.id) {
+    try {
+      await privy.auth.logout({ userId: cachedUser.id });
+    } catch (e) {
+      console.warn('[privy] Logout error (continuing anyway):', e.message);
+    }
   }
   clearCachedUser();
 }
