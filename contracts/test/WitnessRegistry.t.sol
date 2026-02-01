@@ -222,6 +222,44 @@ contract WitnessRegistryTest is Test {
         assertEq(createdAt, updatedAt);
     }
 
+    function test_UpdateSession_UpdatesExistingSession() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        // First update (chunk 1)
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, keccak256("root1"), "QmManifest1", 1, groupIds);
+
+        // Second update (chunk 2)
+        bytes32 root2 = keccak256("root2");
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, root2, "QmManifest2", 2, groupIds);
+
+        // Third update (chunk 3)
+        bytes32 root3 = keccak256("root3");
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, root3, "QmManifest3", 3, groupIds);
+
+        // Verify final state
+        (
+            address creator,
+            bytes32 merkleRoot,
+            string memory manifestCid,
+            uint256 chunkCount,
+            uint64 createdAt,
+            uint64 updatedAt
+        ) = registry.sessions(TEST_SESSION_ID);
+
+        assertEq(creator, alice);
+        assertEq(merkleRoot, root3, "Final merkle root should be root3");
+        assertEq(manifestCid, "QmManifest3", "Final manifest should be QmManifest3");
+        assertEq(chunkCount, 3, "Chunk count should be 3");
+        assertGt(createdAt, 0);
+        assertGe(updatedAt, createdAt);
+    }
+
     // ============================================
     // CONTENT COMMITMENT TESTS
     // ============================================
