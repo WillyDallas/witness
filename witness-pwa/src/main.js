@@ -10,8 +10,9 @@ import { Buffer } from 'buffer';
 globalThis.Buffer = Buffer;
 
 import { initLoginModal, showLoginModal } from './ui/loginModal.js';
-import { isReady, subscribeToAuth, clearAuthState } from './lib/authState.js';
+import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
+import { createRegistrationStatus } from './components/RegistrationStatus.js';
 
 // DOM Elements
 const preview = document.getElementById('preview');
@@ -27,6 +28,7 @@ const recordingsDrawer = document.getElementById('recordings-drawer');
 const drawerBackdrop = document.getElementById('drawer-backdrop');
 const drawerHandle = document.getElementById('drawer-handle');
 const logoutBtn = document.getElementById('logout-btn');
+const registrationContainer = document.getElementById('registration-container');
 
 // State
 let mediaStream = null;
@@ -46,6 +48,9 @@ let pendingFilename = null;
 
 // Drawer state
 let drawerOpen = false;
+
+// Registration component
+let registrationStatusComponent = null;
 
 // Lock hint state (only show once ever)
 const LOCK_HINT_KEY = 'witness_lock_hint_shown';
@@ -584,6 +589,14 @@ async function init() {
             if (!mediaStream) {
                 initCamera();
             }
+
+            // Mount registration status component if not already mounted
+            if (!registrationStatusComponent && state.smartAccountAddress) {
+                registrationStatusComponent = createRegistrationStatus(
+                    registrationContainer,
+                    state.smartAccountAddress
+                );
+            }
         }
     });
 
@@ -591,6 +604,15 @@ async function init() {
     if (authenticated) {
         renderRecordingsList();
         await initCamera();
+
+        // Mount registration component if session was restored
+        const state = getAuthState();
+        if (state.smartAccountAddress && !registrationStatusComponent) {
+            registrationStatusComponent = createRegistrationStatus(
+                registrationContainer,
+                state.smartAccountAddress
+            );
+        }
     } else {
         // Camera will be initialized after login completes
         renderRecordingsList();

@@ -696,3 +696,92 @@ html, body {
 .btn-logout:hover {
     color: #f87171;
 }
+
+/* ==========================================
+   REGISTRATION STATUS
+   ========================================== */
+
+.registration-status {
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin: 1rem 0;
+    background: var(--bg-surface);
+}
+
+.registration-status h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: var(--text-light);
+}
+
+.registration-status .loading {
+    color: var(--text-muted);
+}
+
+.registration-status .status {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.registration-status .status.success {
+    color: #4ade80;
+}
+
+.registration-status .status.pending {
+    color: #fbbf24;
+}
+
+.registration-status .error {
+    color: #ef4444;
+}
+
+.registration-status .timestamp {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.registration-status .tx-link a {
+    color: #60a5fa;
+}
+
+.registration-status .info {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.registration-status .btn-primary {
+    background: var(--red-accent);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+}
+
+.registration-status .btn-primary:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+.registration-status .btn-primary:hover:not(:disabled) {
+    background: var(--red-dark);
+}
+
+.registration-status .btn-secondary {
+    background: transparent;
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.registration-status .btn-secondary:hover {
+    background: var(--bg-surface-hover);
+}
