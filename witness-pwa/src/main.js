@@ -11,6 +11,7 @@ globalThis.Buffer = Buffer;
 
 import { initLoginModal, showLoginModal } from './ui/loginModal.js';
 import { showEncryptionTest } from './ui/encryptionTest.js';
+import { showGroupsModal } from './ui/groupsModal.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
@@ -549,6 +550,15 @@ drawerToggle.addEventListener('click', () => {
 // Close drawer when clicking backdrop or handle
 drawerBackdrop.addEventListener('click', closeDrawer);
 drawerHandle.addEventListener('click', closeDrawer);
+
+// Groups button handler
+const groupsBtn = document.getElementById('groups-btn');
+if (groupsBtn) {
+    groupsBtn.addEventListener('click', () => {
+        closeDrawer();
+        showGroupsModal();
+    });
+}
 
 // Encryption test button handler
 encryptionTestBtn.addEventListener('click', () => {
