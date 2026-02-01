@@ -314,6 +314,29 @@ export async function unwrapContentKey(iv, wrappedKey, groupSecret) {
 }
 
 /**
+ * Unwrap a session key for chunk key derivation (extractable)
+ * Used for chunked content where we need to derive per-chunk keys via HKDF
+ *
+ * @param {Uint8Array} iv - IV used during wrapping
+ * @param {ArrayBuffer} wrappedKey - The wrapped session key
+ * @param {Uint8Array} groupSecret - Group secret to unwrap with
+ * @returns {Promise<CryptoKey>} The unwrapped session key (extractable for HKDF)
+ */
+export async function unwrapSessionKeyForChunks(iv, wrappedKey, groupSecret) {
+  const groupKey = await deriveGroupKey(groupSecret);
+
+  return crypto.subtle.unwrapKey(
+    'raw',
+    wrappedKey,
+    groupKey,
+    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', length: 256 },
+    true, // EXTRACTABLE - needed for HKDF chunk key derivation
+    ['encrypt', 'decrypt']
+  );
+}
+
+/**
  * Generate a random content key for encrypting media
  * @returns {Promise<CryptoKey>} Extractable AES-256-GCM key
  */
