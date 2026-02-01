@@ -93,15 +93,18 @@ export class SessionManager {
    * Process a single chunk through the full pipeline
    * @param {Blob} blob - Raw video chunk
    * @param {number} [duration=10000] - Chunk duration in ms
+   * @param {Object} [metadata] - Optional metadata from CaptureService
+   * @param {Object} [metadata.location] - GPS location data
+   * @param {number} [metadata.capturedAt] - Timestamp when chunk was captured
    * @returns {Promise<ChunkResult>}
    */
-  async processChunk(blob, duration = 10000) {
+  async processChunk(blob, duration = 10000, metadata = {}) {
     if (!this._active) {
       throw new Error('Session is not active');
     }
 
     const chunkIndex = this._chunkIndex;
-    const capturedAt = Date.now();
+    const capturedAt = metadata.capturedAt || Date.now();
 
     console.log(`[SessionManager] Processing chunk ${chunkIndex}`);
 
@@ -129,6 +132,7 @@ export class SessionManager {
       iv: chunkMeta.iv,
       capturedAt,
       uploadedAt: Date.now(),
+      location: metadata.location || null,
     });
     this.manifestManager.setMerkleRoot(merkleRoot);
 
@@ -193,6 +197,21 @@ export class SessionManager {
   }
 
   /**
+   * Mark the session as interrupted (capture error, tab close, etc.)
+   */
+  async markInterrupted() {
+    this._status = 'interrupted';
+    this.manifestManager.setStatus('interrupted');
+
+    await db.sessions.update(this.sessionId, {
+      status: 'interrupted',
+      interruptedAt: Date.now(),
+    });
+
+    console.log(`[SessionManager] Session ${this.sessionId} marked interrupted`);
+  }
+
+  /**
    * Check if session is active
    * @returns {boolean}
    */
@@ -231,6 +250,29 @@ export class SessionManager {
   getManifestCid() {
     return this.manifestManager.getLatestCid();
   }
+}
+
+/**
+ * Create a CaptureService wired to a SessionManager
+ * @param {SessionManager} sessionManager - The session to wire to
+ * @param {Object} [options] - Additional CaptureService options
+ * @returns {Promise<import('../captureService.js').CaptureService>}
+ */
+export async function createWiredCapture(sessionManager, options = {}) {
+  const { CaptureService } = await import('../captureService.js');
+
+  return new CaptureService({
+    ...options,
+    onChunk: async (blob, index, metadata) => {
+      // Use timeslice as duration (default 10000ms)
+      const duration = options.timeslice || 10000;
+      await sessionManager.processChunk(blob, duration, metadata);
+    },
+    onError: (err) => {
+      console.error('[SessionManager] Capture error:', err);
+      sessionManager.markInterrupted();
+    }
+  });
 }
 
 export default SessionManager;
