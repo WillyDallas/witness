@@ -84,6 +84,7 @@ export class CaptureService {
     this.state = 'idle';
     this.mimeType = null;
     this.startTime = null;
+    this.wakeLock = null;
   }
 
   /**
@@ -173,6 +174,42 @@ export class CaptureService {
     this.stream.getTracks().forEach(track => {
       track.addEventListener('ended', (e) => this._handleTrackEnded(e));
     });
+  }
+
+  /**
+   * Request wake lock to prevent screen sleep during recording
+   */
+  async _requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+      console.warn('[CaptureService] Wake Lock API not available');
+      return;
+    }
+
+    try {
+      this.wakeLock = await navigator.wakeLock.request('screen');
+
+      this.wakeLock.addEventListener('release', () => {
+        console.log('[CaptureService] Wake lock released');
+      });
+
+      console.log('[CaptureService] Wake lock acquired');
+    } catch (err) {
+      console.warn('[CaptureService] Wake lock request failed:', err);
+    }
+  }
+
+  /**
+   * Release wake lock
+   */
+  async _releaseWakeLock() {
+    if (this.wakeLock) {
+      try {
+        await this.wakeLock.release();
+        this.wakeLock = null;
+      } catch (err) {
+        console.warn('[CaptureService] Wake lock release failed:', err);
+      }
+    }
   }
 
   /**
@@ -267,6 +304,9 @@ export class CaptureService {
       // Start GPS tracking (non-blocking)
       this._startGPS();
 
+      // Request wake lock to prevent screen sleep
+      await this._requestWakeLock();
+
       // Determine MIME type
       this.mimeType = getSupportedMimeType();
       console.log(`[CaptureService] Using MIME type: ${this.mimeType}`);
@@ -313,6 +353,8 @@ export class CaptureService {
       this._setState('stopping');
       this.recorder.stop();
     }
+    // Release wake lock
+    this._releaseWakeLock();
   }
 
   /**
@@ -393,6 +435,7 @@ export class CaptureService {
   destroy() {
     this.stop();
     this._stopGPS();
+    this._releaseWakeLock();
 
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
