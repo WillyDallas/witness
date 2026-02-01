@@ -280,6 +280,34 @@ export async function commitContent(contentId, merkleRoot, manifestCID, groupIds
 }
 
 /**
+ * Update session with new chunk data (streaming upload)
+ * @param {string} sessionId - Session ID (bytes32 hex)
+ * @param {string} merkleRoot - Current merkle root (bytes32 hex)
+ * @param {string} manifestCid - IPFS CID of manifest
+ * @param {bigint} chunkCount - Number of chunks
+ * @param {string[]} groupIds - Group IDs for access control
+ * @returns {Promise<string>} Transaction hash
+ */
+export async function updateSession(sessionId, merkleRoot, manifestCid, chunkCount, groupIds) {
+  const client = getSmartAccountClient();
+  if (!client) {
+    throw new Error('Smart account not initialized');
+  }
+
+  const hash = await client.sendTransaction({
+    to: REGISTRY_ADDRESS,
+    data: encodeFunctionData({
+      abi: WitnessRegistryABI,
+      functionName: 'updateSession',
+      args: [sessionId, merkleRoot, manifestCid, chunkCount, groupIds],
+    }),
+  });
+
+  console.log('[contract] Update session tx:', hash);
+  return hash;
+}
+
+/**
  * Submit anonymous attestation to content
  * @param {string} contentId - Content ID to attest to
  * @param {string} groupId - Group ID through which attesting
