@@ -127,6 +127,27 @@ export async function getSemaphoreGroupId(groupId) {
 }
 
 /**
+ * Get session details from on-chain
+ * @param {string} sessionId - Session ID (bytes32 hex)
+ * @returns {Promise<{creator: string, merkleRoot: string, manifestCid: string, chunkCount: bigint, createdAt: bigint, updatedAt: bigint}>}
+ */
+export async function getSession(sessionId) {
+  const contract = getRegistryContract();
+  const [creator, merkleRoot, manifestCid, chunkCount, createdAt, updatedAt] = await contract.read.sessions([sessionId]);
+  return { creator, merkleRoot, manifestCid, chunkCount, createdAt, updatedAt };
+}
+
+/**
+ * Get groups a session is shared with
+ * @param {string} sessionId - Session ID (bytes32 hex)
+ * @returns {Promise<string[]>} Array of group IDs
+ */
+export async function getSessionGroups(sessionId) {
+  const contract = getRegistryContract();
+  return contract.read.getSessionGroups([sessionId]);
+}
+
+/**
  * Check if a nullifier has been used
  * @param {bigint} nullifier - The nullifier to check
  * @returns {Promise<boolean>} Whether nullifier is used
@@ -173,6 +194,104 @@ export async function getSemaphoreGroupMembers(semaphoreGroupId) {
   console.log(`[contract] On-chain merkle root: ${onChainRoot?.toString().slice(0, 20)}...`);
 
   return { commitments, onChainRoot };
+}
+
+/**
+ * @typedef {Object} SessionData
+ * @property {string} sessionId - Session ID (bytes32 hex)
+ * @property {string} creator - Creator address
+ * @property {string} merkleRoot - Current merkle root (bytes32 hex)
+ * @property {string} manifestCid - IPFS CID of latest manifest
+ * @property {number} chunkCount - Number of chunks
+ * @property {string[]} groupIds - Groups this session is shared with
+ * @property {number} updatedAt - Last update timestamp (from event)
+ */
+
+/**
+ * Fetch sessions for a user by querying SessionUpdated events
+ * Deduplicates by sessionId, keeping the most recent update
+ * @param {string} address - User address to query sessions for
+ * @returns {Promise<SessionData[]>} Array of session data
+ */
+export async function getUserSessions(address) {
+  const publicClient = getPublicClient();
+
+  // SessionUpdated event signature from ABI
+  const sessionUpdatedEvent = parseAbiItem(
+    'event SessionUpdated(bytes32 indexed sessionId, address indexed uploader, bytes32 merkleRoot, string manifestCid, uint256 chunkCount, bytes32[] groupIds, uint256 timestamp)'
+  );
+
+  const logs = await publicClient.getLogs({
+    address: REGISTRY_ADDRESS,
+    event: sessionUpdatedEvent,
+    args: { uploader: address },
+    fromBlock: LOG_START_BLOCK,
+    toBlock: 'latest',
+  });
+
+  // Deduplicate by sessionId (keep latest based on block/log position)
+  const sessions = {};
+  for (const log of logs) {
+    const sessionId = log.args.sessionId;
+    // Each new log supersedes previous - they're ordered chronologically
+    sessions[sessionId] = {
+      sessionId,
+      creator: log.args.uploader,
+      merkleRoot: log.args.merkleRoot,
+      manifestCid: log.args.manifestCid,
+      chunkCount: Number(log.args.chunkCount),
+      groupIds: log.args.groupIds,
+      updatedAt: Number(log.args.timestamp),
+    };
+  }
+
+  console.log(`[contract] Found ${Object.keys(sessions).length} sessions for ${address.slice(0, 10)}...`);
+
+  return Object.values(sessions);
+}
+
+/**
+ * Fetch sessions shared with a specific group
+ * @param {string} groupId - Group ID to query
+ * @returns {Promise<SessionData[]>} Array of session data shared with this group
+ */
+export async function getGroupSessions(groupId) {
+  const publicClient = getPublicClient();
+
+  // Query all SessionUpdated events (no uploader filter)
+  const sessionUpdatedEvent = parseAbiItem(
+    'event SessionUpdated(bytes32 indexed sessionId, address indexed uploader, bytes32 merkleRoot, string manifestCid, uint256 chunkCount, bytes32[] groupIds, uint256 timestamp)'
+  );
+
+  const logs = await publicClient.getLogs({
+    address: REGISTRY_ADDRESS,
+    event: sessionUpdatedEvent,
+    fromBlock: LOG_START_BLOCK,
+    toBlock: 'latest',
+  });
+
+  // Deduplicate and filter by groupId membership
+  const sessions = {};
+  for (const log of logs) {
+    const sessionGroupIds = log.args.groupIds || [];
+    // Check if this session is shared with the target group
+    if (!sessionGroupIds.includes(groupId)) continue;
+
+    const sessionId = log.args.sessionId;
+    sessions[sessionId] = {
+      sessionId,
+      creator: log.args.uploader,
+      merkleRoot: log.args.merkleRoot,
+      manifestCid: log.args.manifestCid,
+      chunkCount: Number(log.args.chunkCount),
+      groupIds: sessionGroupIds,
+      updatedAt: Number(log.args.timestamp),
+    };
+  }
+
+  console.log(`[contract] Found ${Object.keys(sessions).length} sessions for group ${groupId.slice(0, 10)}...`);
+
+  return Object.values(sessions);
 }
 
 // ============================================

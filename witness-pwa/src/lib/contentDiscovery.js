@@ -4,19 +4,21 @@
  */
 
 import { getAuthState } from './authState.js';
-import { getUserContent, getGroupContent, getContent } from './contract.js';
+import { getUserContent, getGroupContent, getContent, getUserSessions, getGroupSessions } from './contract.js';
 import { getGroupSecrets } from './storage.js';
 import { downloadManifest } from './ipfs.js';
 
 /**
  * @typedef {Object} ContentItem
- * @property {string} contentId - On-chain content ID
+ * @property {string} contentId - On-chain content ID (or sessionId for streaming)
  * @property {string} merkleRoot - On-chain Merkle root
  * @property {string} manifestCID - IPFS CID of manifest
  * @property {string} uploader - Uploader address
  * @property {number} timestamp - Unix timestamp
  * @property {string[]} groupIds - Groups this content is shared with (that user has access to)
  * @property {object|null} manifest - Cached manifest (if fetched)
+ * @property {boolean} [isSession] - True if this is a streaming session (chunked content)
+ * @property {number} [chunkCount] - Number of chunks (for sessions)
  */
 
 /**
@@ -102,11 +104,65 @@ export async function discoverContent(forceRefresh = false) {
       }
     }
 
+    // 4. Discover streaming sessions (chunked recordings)
+    // First, get user's own sessions
+    const userSessions = await getUserSessions(smartAccountAddress);
+    for (const session of userSessions) {
+      if (!session.manifestCid) continue;
+
+      // Filter to groups user has access to
+      const accessibleGroups = session.groupIds.filter(gid => groupIds.includes(gid));
+
+      items[session.sessionId] = {
+        contentId: session.sessionId,
+        merkleRoot: session.merkleRoot,
+        manifestCID: session.manifestCid,
+        uploader: session.creator,
+        timestamp: session.updatedAt,
+        groupIds: accessibleGroups,
+        manifest: null,
+        isSession: true,
+        chunkCount: session.chunkCount,
+      };
+    }
+
+    // Then, get sessions from each group (may overlap with user's own, deduplication handled by object key)
+    for (const groupId of groupIds) {
+      try {
+        const groupSessions = await getGroupSessions(groupId);
+        for (const session of groupSessions) {
+          if (!session.manifestCid) continue;
+
+          // Only add if not already in items (user's own session takes precedence)
+          if (!items[session.sessionId]) {
+            // Filter to groups user has access to
+            const accessibleGroups = session.groupIds.filter(gid => groupIds.includes(gid));
+
+            items[session.sessionId] = {
+              contentId: session.sessionId,
+              merkleRoot: session.merkleRoot,
+              manifestCID: session.manifestCid,
+              uploader: session.creator,
+              timestamp: session.updatedAt,
+              groupIds: accessibleGroups,
+              manifest: null,
+              isSession: true,
+              chunkCount: session.chunkCount,
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('[discovery] Failed to fetch sessions for group:', groupId.slice(0, 18), err.message);
+      }
+    }
+
     // Update cache
     contentCache.items = items;
     contentCache.lastRefresh = now;
 
-    console.log('[discovery] Found', Object.keys(items).length, 'content items');
+    const sessionCount = Object.values(items).filter(i => i.isSession).length;
+    const contentCount = Object.keys(items).length - sessionCount;
+    console.log('[discovery] Found', contentCount, 'content items and', sessionCount, 'streaming sessions');
 
     return organizeContent(Object.values(items), smartAccountAddress);
   } catch (err) {
