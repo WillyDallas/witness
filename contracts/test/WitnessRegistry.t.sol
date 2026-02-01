@@ -302,6 +302,65 @@ contract WitnessRegistryTest is Test {
         registry.updateSession(TEST_SESSION_ID, keccak256("bob-root"), "QmBobManifest", 2, groupIds);
     }
 
+    function test_UpdateSession_RevertIfNotRegistered() public {
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.NotRegistered.selector);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+    }
+
+    function test_UpdateSession_RevertIfEmptyManifest() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.EmptyManifestCID.selector);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, "", 1, groupIds);
+    }
+
+    function test_UpdateSession_RevertIfNoGroups() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](0);
+
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.NoGroupsSpecified.selector);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+    }
+
+    function test_UpdateSession_RevertIfZeroChunkCount() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.ZeroChunkCount.selector);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 0, groupIds);
+    }
+
+    function test_UpdateSession_RevertIfNotMember() public {
+        _setupForSession();
+
+        // Create a different group that alice is not a member of
+        vm.prank(bob);
+        registry.register();
+        bytes32 bobGroupId = keccak256("bob-group");
+        vm.prank(bob);
+        registry.createGroup(bobGroupId, BOB_COMMITMENT);
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = bobGroupId;
+
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.NotMember.selector);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+    }
+
     // ============================================
     // CONTENT COMMITMENT TESTS
     // ============================================
