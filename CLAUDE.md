@@ -106,3 +106,42 @@ Camera APIs require localhost or HTTPS.
 Copy `.env.example` to `.env` and fill in your API keys:
 - **Privy**: Get App ID and Client ID from https://dashboard.privy.io
 - **Pimlico**: Get API Key from https://dashboard.pimlico.io
+
+## Smart Contract Deployment
+
+### Deploy WitnessRegistry to Base Sepolia
+
+From the project root:
+
+```bash
+cd contracts && export $(grep -v '^#' ../.env | grep -v '^$' | xargs) && \
+  forge script script/DeployWitnessRegistry.s.sol:DeployWitnessRegistry \
+  --rpc-url base-sepolia --broadcast --verify -vvvv
+```
+
+**Flags explained:**
+- `export $(grep ...)` - Loads env vars from root `.env` (more reliable than `source`)
+- `--rpc-url base-sepolia` - Uses named endpoint from `foundry.toml`
+- `--broadcast` - Actually sends transactions (omit for dry-run)
+- `--verify` - Verifies on Basescan using `[etherscan]` config
+- `-vvvv` - Max verbosity
+
+### Dry Run (Simulation)
+```bash
+cd contracts && export $(grep -v '^#' ../.env | grep -v '^$' | xargs) && \
+  forge script script/DeployWitnessRegistry.s.sol:DeployWitnessRegistry \
+  --rpc-url base-sepolia -vvvv
+```
+
+### Resume Failed Verification
+```bash
+cd contracts && export $(grep -v '^#' ../.env | grep -v '^$' | xargs) && \
+  forge script script/DeployWitnessRegistry.s.sol:DeployWitnessRegistry \
+  --rpc-url base-sepolia --resume --verify
+```
+
+### Required Environment Variables
+Set in root `.env`:
+- `DEPLOYER_PRIVATE_KEY` - Wallet private key for deployment
+- `BASE_SEPOLIA_RPC_URL` - RPC endpoint (referenced in foundry.toml)
+- `BASESCAN_API_KEY` - For contract verification
