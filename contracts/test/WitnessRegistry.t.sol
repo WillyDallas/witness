@@ -45,4 +45,55 @@ contract WitnessRegistryTest is Test {
     function test_IsRegistered_ReturnsFalseForNewUser() public view {
         assertFalse(registry.registered(alice));
     }
+
+    // ============================================
+    // GROUP CREATION TESTS
+    // ============================================
+
+    bytes32 public constant TEST_GROUP_ID = keccak256("test-group-secret");
+
+    function test_CreateGroup_Success() public {
+        vm.prank(alice);
+        registry.register();
+
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID);
+
+        (address creator, uint64 createdAt, bool active) = registry.groups(TEST_GROUP_ID);
+        assertEq(creator, alice);
+        assertGt(createdAt, 0);
+        assertTrue(active);
+        assertTrue(registry.groupMembers(TEST_GROUP_ID, alice));
+    }
+
+    function test_CreateGroup_EmitsEvent() public {
+        vm.prank(alice);
+        registry.register();
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, true);
+        emit WitnessRegistry.GroupCreated(TEST_GROUP_ID, alice, uint64(block.timestamp));
+        registry.createGroup(TEST_GROUP_ID);
+    }
+
+    function test_CreateGroup_RevertIfNotRegistered() public {
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.NotRegistered.selector);
+        registry.createGroup(TEST_GROUP_ID);
+    }
+
+    function test_CreateGroup_RevertIfGroupExists() public {
+        vm.prank(alice);
+        registry.register();
+
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID);
+
+        vm.prank(bob);
+        registry.register();
+
+        vm.prank(bob);
+        vm.expectRevert(WitnessRegistry.GroupAlreadyExists.selector);
+        registry.createGroup(TEST_GROUP_ID);
+    }
 }

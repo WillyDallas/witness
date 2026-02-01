@@ -88,4 +88,30 @@ contract WitnessRegistry {
 
         emit UserRegistered(msg.sender, uint64(block.timestamp));
     }
+
+    // ============================================
+    // GROUP MANAGEMENT
+    // ============================================
+
+    /**
+     * @notice Create a new group
+     * @param groupId The keccak256 hash of the group secret
+     * @dev Caller must be registered. Creator is automatically added as member.
+     */
+    function createGroup(bytes32 groupId) external {
+        if (!registered[msg.sender]) revert NotRegistered();
+        if (groups[groupId].createdAt != 0) revert GroupAlreadyExists();
+
+        groups[groupId] = Group({
+            creator: msg.sender,
+            createdAt: uint64(block.timestamp),
+            active: true
+        });
+
+        // Creator is automatically a member
+        groupMembers[groupId][msg.sender] = true;
+        _groupMemberList[groupId].push(msg.sender);
+
+        emit GroupCreated(groupId, msg.sender, uint64(block.timestamp));
+    }
 }
