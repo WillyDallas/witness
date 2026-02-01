@@ -16,6 +16,8 @@ import { showUploadModal } from './ui/uploadModal.js';
 import { showContentBrowser } from './ui/contentBrowser.js';
 import { showRecoveryDialog } from './ui/recoveryDialog.js';
 import { showStorageWarning } from './ui/storageWarning.js';
+import { showRecordingGroupSelect } from './ui/recordingGroupSelect.js';
+import { startRecordingScreen, forceStopRecording } from './ui/recordingScreen.js';
 import { initRecovery } from './lib/streaming/RecoveryService.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
@@ -383,132 +385,28 @@ function downloadBlob(blob, filename) {
 // Event Listeners
 // ============================================
 
-// Track if touch event just fired (to prevent ghost clicks)
-let touchHandled = false;
-
-// Touch event handlers for hold-to-record
-function handleTouchStart(e) {
-    if (recordBtn.disabled) return;
-    e.preventDefault();
-    touchHandled = true;
-
-    const touch = e.touches[0];
-    touchStartY = touch.clientY;
-    isHolding = true;
-
-    // If already recording (locked mode), stop on tap
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopRecording();
-        return;
-    }
-
-    // Visual feedback
-    recordBtn.classList.add('holding');
-
-    // Only show lock hint if never shown before
-    if (!localStorage.getItem(LOCK_HINT_KEY)) {
-        showElement(lockIndicator);
-        lockIndicator.classList.add('visible');
-
-        // Auto-hide after 2 seconds
-        lockHintTimeout = setTimeout(() => {
-            hideElement(lockIndicator);
-            lockIndicator.classList.remove('visible');
-            localStorage.setItem(LOCK_HINT_KEY, 'true');
-        }, 2000);
-    }
-
-    // Start recording
-    startRecording();
-}
-
-function handleTouchMove(e) {
-    if (!isHolding || isLocked) return;
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    const deltaY = touchStartY - touch.clientY;
-
-    // Check if swiped up enough to lock
-    if (deltaY > LOCK_THRESHOLD) {
-        isLocked = true;
-
-        // Clear auto-hide timeout
-        if (lockHintTimeout) {
-            clearTimeout(lockHintTimeout);
-            lockHintTimeout = null;
-        }
-
-        lockIndicator.classList.add('locked');
-        updateStatus('Recording locked - tap to stop');
-
-        // Mark hint as shown so it never appears again
-        localStorage.setItem(LOCK_HINT_KEY, 'true');
-
-        // Hide the indicator after a moment
-        setTimeout(() => {
-            hideElement(lockIndicator);
-            lockIndicator.classList.remove('visible', 'locked');
-        }, 800);
-    }
-}
-
-function handleTouchEnd(e) {
-    if (!isHolding) return;
-    e.preventDefault();
-
-    isHolding = false;
-    recordBtn.classList.remove('holding');
-
-    // Clear auto-hide timeout
-    if (lockHintTimeout) {
-        clearTimeout(lockHintTimeout);
-        lockHintTimeout = null;
-    }
-
-    // If locked, keep recording; otherwise stop
-    if (!isLocked) {
-        // Mark hint as shown (they've seen it once)
-        localStorage.setItem(LOCK_HINT_KEY, 'true');
-
-        hideElement(lockIndicator);
-        lockIndicator.classList.remove('visible');
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            stopRecording();
-        }
-    }
-}
-
-function handleTouchCancel(e) {
-    // Treat cancel same as end
-    handleTouchEnd(e);
-}
-
-// Attach touch listeners
-recordBtn.addEventListener('touchstart', handleTouchStart, { passive: false });
-recordBtn.addEventListener('touchmove', handleTouchMove, { passive: false });
-recordBtn.addEventListener('touchend', handleTouchEnd, { passive: false });
-recordBtn.addEventListener('touchcancel', handleTouchCancel, { passive: false });
-
-// Fallback click handler for desktop/mouse
-recordBtn.addEventListener('click', (e) => {
-    // Skip if touch event just handled this
-    if (touchHandled) {
-        touchHandled = false;
-        return;
-    }
-
+// New simplified record button - opens group selection flow
+function handleRecordButtonClick() {
     if (recordBtn.disabled) return;
 
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopRecording();
-    } else {
-        startRecording();
-        // For desktop, auto-lock since there's no hold gesture
-        isLocked = true;
-        updateStatus('Recording - click to stop');
-    }
-});
+    // Show group selection modal
+    showRecordingGroupSelect((selectedGroupIds) => {
+        // User selected groups and clicked Start
+        startRecordingScreen(selectedGroupIds, {
+            onComplete: (result) => {
+                if (result.action === 'view') {
+                    // Navigate to content detail
+                    showContentBrowser(result.sessionId);
+                }
+                // Re-initialize camera for main screen
+                initCamera();
+            }
+        });
+    });
+}
+
+// Simple click handler for record button
+recordBtn.addEventListener('click', handleRecordButtonClick);
 
 // Save button handler (requires fresh user gesture for iOS share)
 saveBtn.addEventListener('click', async () => {
@@ -591,7 +489,10 @@ encryptionTestBtn.addEventListener('click', () => {
 
 // Logout button handler
 logoutBtn.addEventListener('click', async () => {
-    // Stop any active recording
+    // Stop any active streaming recording
+    await forceStopRecording();
+
+    // Stop any legacy recording
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         stopRecording();
     }
