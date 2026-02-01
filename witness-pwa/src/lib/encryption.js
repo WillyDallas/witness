@@ -102,7 +102,7 @@ function normalizeSignature(sig) {
  * Derive AES-256-GCM key from wallet signature using HKDF
  * @param {string} signature - Normalized signature
  * @param {string} walletAddress - EOA address (used in salt)
- * @returns {Promise<CryptoKey>} Non-extractable AES-256-GCM key
+ * @returns {Promise<CryptoKey>} Extractable AES-256-GCM key (for HKDF chunk derivation)
  */
 async function deriveKeyFromSignature(signature, walletAddress) {
   const normalized = normalizeSignature(signature);
@@ -124,6 +124,7 @@ async function deriveKeyFromSignature(signature, walletAddress) {
   );
 
   // Derive AES-256-GCM key
+  // Note: Must be extractable so ChunkProcessor can derive per-chunk keys via HKDF
   const aesKey = await crypto.subtle.deriveKey(
     {
       name: 'HKDF',
@@ -133,7 +134,7 @@ async function deriveKeyFromSignature(signature, walletAddress) {
     },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
-    false, // Non-extractable for security
+    true, // Extractable for HKDF chunk key derivation
     ['encrypt', 'decrypt']
   );
 
