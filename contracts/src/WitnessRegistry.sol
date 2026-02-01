@@ -88,6 +88,15 @@ contract WitnessRegistry {
         uint256 newCount,
         uint64 timestamp
     );
+    event SessionUpdated(
+        bytes32 indexed sessionId,
+        address indexed uploader,
+        bytes32 merkleRoot,
+        string manifestCid,
+        uint256 chunkCount,
+        bytes32[] groupIds,
+        uint256 timestamp
+    );
 
     // ============================================
     // ERRORS
@@ -105,6 +114,8 @@ contract WitnessRegistry {
     error ContentNotInGroup();
     error NullifierAlreadyUsed();
     error InvalidProof();
+    error NotSessionCreator();
+    error ZeroChunkCount();
 
     // ============================================
     // CONSTRUCTOR
