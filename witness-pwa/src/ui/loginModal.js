@@ -11,7 +11,7 @@ import {
   getWalletAddress,
 } from '../lib/privy.js';
 import { initializeSmartAccount } from '../lib/smartAccount.js';
-import { deriveEncryptionKey } from '../lib/encryption.js';
+import { getOrDeriveEncryptionKey, clearCachedSignature } from '../lib/encryption.js';
 import { updateAuthState, clearAuthState } from '../lib/authState.js';
 
 // DOM elements (cached on init)
@@ -107,9 +107,9 @@ async function completeLogin(user) {
     setLoadingMessage('Setting up gasless transactions...');
     const { kernelAccount, client, address } = await initializeSmartAccount(provider, eoaAddress);
 
-    // Step 3: Derive encryption key (user sees signature prompt)
+    // Step 3: Get or derive encryption key (uses cache if available)
     setLoadingMessage('Securing your encryption keys...');
-    const encryptionKey = await deriveEncryptionKey(provider, eoaAddress);
+    const encryptionKey = await getOrDeriveEncryptionKey(provider, eoaAddress);
 
     // Update auth state
     updateAuthState({
@@ -126,10 +126,11 @@ async function completeLogin(user) {
 
     // Show success UI
     showAuthenticated(address);
+    console.log('[auth] Login complete - EOA:', eoaAddress, 'Smart:', address);
 
     return true;
   } catch (error) {
-    console.error('Login completion failed:', error);
+    console.error('[auth] Login failed:', error.message);
     showStep('email');
     showError(error.message || 'Failed to complete setup. Please try again.');
     return false;
@@ -249,6 +250,7 @@ export async function initLoginModal() {
  * Show the login modal (for logout/re-auth)
  */
 export function showLoginModal() {
+  clearCachedSignature(); // Clear encryption key cache on logout
   clearAuthState();
   elements.modal.classList.remove('hidden');
   elements.walletIndicator.classList.add('hidden');

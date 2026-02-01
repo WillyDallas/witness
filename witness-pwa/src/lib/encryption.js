@@ -6,6 +6,9 @@
  * Smart wallet signatures are not guaranteed deterministic.
  */
 
+// Session storage key for cached signature
+const SIGNATURE_CACHE_KEY = 'witness_enc_sig';
+
 // EIP-712 domain for key derivation signatures
 const ENCRYPTION_KEY_DOMAIN = {
   name: 'Witness Protocol',
@@ -14,8 +17,14 @@ const ENCRYPTION_KEY_DOMAIN = {
   verifyingContract: '0x0000000000000000000000000000000000000000',
 };
 
-// EIP-712 types for key derivation
+// EIP-712 types for key derivation (must include EIP712Domain per spec)
 const ENCRYPTION_KEY_TYPES = {
+  EIP712Domain: [
+    { name: 'name', type: 'string' },
+    { name: 'version', type: 'string' },
+    { name: 'chainId', type: 'uint256' },
+    { name: 'verifyingContract', type: 'address' },
+  ],
   EncryptionKeyRequest: [
     { name: 'purpose', type: 'string' },
     { name: 'application', type: 'string' },
@@ -41,12 +50,16 @@ async function requestKeyDerivationSignature(provider, walletAddress) {
     },
   };
 
-  const signature = await provider.request({
-    method: 'eth_signTypedData_v4',
-    params: [walletAddress, JSON.stringify(typedData)],
-  });
-
-  return signature;
+  try {
+    const signature = await provider.request({
+      method: 'eth_signTypedData_v4',
+      params: [walletAddress, JSON.stringify(typedData)],
+    });
+    return signature;
+  } catch (error) {
+    console.error('[encryption] Signature request failed:', error.message);
+    throw error;
+  }
 }
 
 /**
@@ -134,11 +147,12 @@ async function deriveKeyFromSignature(signature, walletAddress) {
  * @returns {Promise<CryptoKey>} Master encryption key
  */
 export async function deriveEncryptionKey(provider, walletAddress) {
-  // Request signature (user sees EIP-712 prompt)
+  // Request signature (triggers wallet signing prompt)
   const signature = await requestKeyDerivationSignature(provider, walletAddress);
 
   // Derive key from signature
   const key = await deriveKeyFromSignature(signature, walletAddress);
+  console.log('[encryption] Key derived for', walletAddress.slice(0, 10) + '...');
 
   return key;
 }
@@ -189,4 +203,84 @@ export async function sha256(data) {
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============================================
+// Session Persistence (cache normalized signature)
+// ============================================
+
+/**
+ * Cache the normalized signature for session persistence
+ * @param {string} walletAddress - EOA address
+ * @param {string} signature - Normalized signature
+ */
+function cacheSignature(walletAddress, signature) {
+  const data = {
+    address: walletAddress.toLowerCase(),
+    signature: normalizeSignature(signature),
+  };
+  sessionStorage.setItem(SIGNATURE_CACHE_KEY, JSON.stringify(data));
+  console.log('[encryption] Signature cached for session');
+}
+
+/**
+ * Retrieve cached signature for wallet
+ * @param {string} walletAddress - EOA address
+ * @returns {string|null} Cached signature or null
+ */
+function getCachedSignature(walletAddress) {
+  try {
+    const data = sessionStorage.getItem(SIGNATURE_CACHE_KEY);
+    if (!data) return null;
+
+    const parsed = JSON.parse(data);
+    if (parsed.address !== walletAddress.toLowerCase()) {
+      // Different wallet - clear stale cache
+      clearCachedSignature();
+      return null;
+    }
+    return parsed.signature;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear cached signature (call on logout)
+ */
+export function clearCachedSignature() {
+  sessionStorage.removeItem(SIGNATURE_CACHE_KEY);
+  console.log('[encryption] Signature cache cleared');
+}
+
+/**
+ * Get or derive encryption key - uses cached signature if available
+ * This provides session persistence without re-prompting for signature
+ * @param {object} provider - Privy embedded wallet provider
+ * @param {string} walletAddress - EOA address
+ * @returns {Promise<CryptoKey>} Master encryption key
+ */
+export async function getOrDeriveEncryptionKey(provider, walletAddress) {
+  // Check for cached signature first
+  const cachedSig = getCachedSignature(walletAddress);
+
+  if (cachedSig) {
+    console.log('[encryption] Using cached signature for key derivation');
+    const key = await deriveKeyFromSignature(cachedSig, walletAddress);
+    console.log('[encryption] Key restored from cache for', walletAddress.slice(0, 10) + '...');
+    return key;
+  }
+
+  // No cache - request fresh signature
+  const signature = await requestKeyDerivationSignature(provider, walletAddress);
+  const normalizedSig = normalizeSignature(signature);
+
+  // Cache for session persistence
+  cacheSignature(walletAddress, normalizedSig);
+
+  // Derive key from signature
+  const key = await deriveKeyFromSignature(normalizedSig, walletAddress);
+  console.log('[encryption] Key derived for', walletAddress.slice(0, 10) + '...');
+
+  return key;
 }

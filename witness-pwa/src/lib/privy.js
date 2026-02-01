@@ -12,6 +12,11 @@ import { sepolia } from 'viem/chains';
 // Singleton Privy instance
 let privyInstance = null;
 let privyIframe = null;
+let iframeReadyPromise = null;
+let iframeReady = false;
+
+// Session storage key for user cache
+const USER_CACHE_KEY = 'witness_privy_user';
 
 /**
  * Initialize Privy SDK with iframe for embedded wallet secure context
@@ -39,15 +44,47 @@ export function initPrivy() {
   privyIframe.src = privyInstance.embeddedWallet.getURL();
   privyIframe.style.display = 'none';
   privyIframe.id = 'privy-iframe';
-  document.body.appendChild(privyIframe);
 
-  // Set up message passing between app and Privy iframe
-  privyInstance.setMessagePoster(privyIframe.contentWindow);
+  // Set up message listener BEFORE adding iframe to DOM
+  // Per Privy docs: pass ALL messages to onMessage - let SDK handle filtering
   window.addEventListener('message', (event) => {
-    privyInstance.embeddedWallet.onMessage(event.data);
+    // Only process messages after iframe is ready to avoid "proxy not initialized" errors
+    if (!iframeReady) return;
+
+    // Pass ALL messages to Privy SDK - it handles its own filtering
+    try {
+      privyInstance.embeddedWallet.onMessage(event.data);
+    } catch (e) {
+      // Silently ignore messages not meant for Privy
+    }
   });
 
+  // Create promise that resolves when iframe is ready
+  iframeReadyPromise = new Promise((resolve) => {
+    privyIframe.onload = () => {
+      privyInstance.setMessagePoster(privyIframe.contentWindow);
+      iframeReady = true;
+      console.log('[privy] Initialized');
+      resolve();
+    };
+    privyIframe.onerror = (e) => {
+      console.error('[privy] Iframe failed to load:', e);
+    };
+  });
+
+  document.body.appendChild(privyIframe);
+
   return privyInstance;
+}
+
+/**
+ * Wait for Privy iframe to be ready
+ * @returns {Promise<void>}
+ */
+export async function waitForPrivyReady() {
+  if (iframeReadyPromise) {
+    await iframeReadyPromise;
+  }
 }
 
 /**
@@ -59,19 +96,61 @@ export function getPrivy() {
 }
 
 /**
+ * Cache user for session persistence
+ * @param {object} user - Privy user object
+ */
+function cacheUser(user) {
+  localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+}
+
+/**
+ * Get cached user
+ * @returns {object|null}
+ */
+function getCachedUser() {
+  try {
+    const data = localStorage.getItem(USER_CACHE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear cached user
+ */
+function clearCachedUser() {
+  localStorage.removeItem(USER_CACHE_KEY);
+}
+
+/**
  * Check if user has an active session
  * @returns {Promise<{authenticated: boolean, user: object|null}>}
  */
 export async function checkSession() {
   const privy = getPrivy();
   if (!privy) {
+    console.log('[privy] checkSession: no privy instance');
     return { authenticated: false, user: null };
   }
 
+  // Wait for iframe to be ready before checking session
+  await waitForPrivyReady();
+
   try {
-    const user = await privy.getUser();
+    // Check if we have a valid access token (indicates active session)
+    const token = await privy.getAccessToken();
+    console.log('[privy] checkSession: token exists:', !!token);
+    if (!token) {
+      clearCachedUser();
+      return { authenticated: false, user: null };
+    }
+    // Get cached user (js-sdk-core doesn't have getSession)
+    const user = getCachedUser();
+    console.log('[privy] checkSession: cached user:', user?.id?.slice(0, 10) + '...');
     return { authenticated: !!user, user };
-  } catch {
+  } catch (error) {
+    console.log('[privy] checkSession error:', error.message);
     return { authenticated: false, user: null };
   }
 }
@@ -99,6 +178,8 @@ export async function loginWithEmailCode(email, code) {
   if (!privy) throw new Error('Privy not initialized');
 
   const result = await privy.auth.email.loginWithCode(email, code);
+  // Cache user for session persistence (js-sdk-core doesn't persist user)
+  cacheUser(result.user);
   return { user: result.user, isNewUser: result.is_new_user };
 }
 
@@ -111,23 +192,30 @@ export async function getOrCreateWallet(user) {
   const privy = getPrivy();
   if (!privy) throw new Error('Privy not initialized');
 
+  // Wait for iframe to be ready before any wallet operations
+  await waitForPrivyReady();
+
   // Check for existing embedded wallet
   let wallet = getUserEmbeddedEthereumWallet(user);
+  let currentUser = user;
 
   // Create if doesn't exist
   if (!wallet) {
-    await privy.embeddedWallet.create({});
-    // Refresh user to get wallet
-    const updatedUser = await privy.getUser();
-    wallet = getUserEmbeddedEthereumWallet(updatedUser);
+    console.log('[privy] Creating embedded wallet...');
+    const result = await privy.embeddedWallet.create({});
+    currentUser = result.user;
+    wallet = getUserEmbeddedEthereumWallet(currentUser);
+    // Update cached user with wallet info
+    cacheUser(currentUser);
+    console.log('[privy] Wallet created:', wallet?.address);
   }
 
   if (!wallet) {
     throw new Error('Failed to create embedded wallet');
   }
 
-  // Get provider for signing
-  const { entropyId, entropyIdVerifier } = getEntropyDetailsFromUser(user);
+  // Get provider for signing (use the current user for entropy details)
+  const { entropyId, entropyIdVerifier } = getEntropyDetailsFromUser(currentUser);
   const provider = await privy.embeddedWallet.getEthereumProvider({
     wallet,
     entropyId,
@@ -146,6 +234,7 @@ export async function logout() {
   if (privy) {
     await privy.logout();
   }
+  clearCachedUser();
 }
 
 /**
