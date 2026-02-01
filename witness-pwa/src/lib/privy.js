@@ -7,7 +7,7 @@ import Privy, {
   getUserEmbeddedEthereumWallet,
   getEntropyDetailsFromUser,
 } from '@privy-io/js-sdk-core';
-import { sepolia } from 'viem/chains';
+import { baseSepolia } from 'viem/chains';
 
 // Singleton Privy instance
 let privyInstance = null;
@@ -35,7 +35,7 @@ export function initPrivy() {
   privyInstance = new Privy({
     appId,
     clientId,
-    supportedChains: [sepolia],
+    supportedChains: [baseSepolia],
     storage: new LocalStorage(),
   });
 

@@ -13,7 +13,7 @@ const SIGNATURE_CACHE_KEY = 'witness_enc_sig';
 const ENCRYPTION_KEY_DOMAIN = {
   name: 'Witness Protocol',
   version: '1',
-  chainId: 11155111, // Sepolia
+  chainId: 84532, // Base Sepolia
   verifyingContract: '0x0000000000000000000000000000000000000000',
 };
 

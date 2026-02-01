@@ -4,6 +4,10 @@
 
 Witness Protocol is an open-source personal safety toolkit for secure evidence capture. Target users are journalists, activists, and domestic abuse survivors who need to capture and preserve evidence that can't be easily deleted or manipulated.
 
+## THIS IS A HACKATHON PROJECT
+
+no data needs to be preserved, do not consider backward compatibility in making plans, we are in a phase of RAPID iteration.
+
 ## Goal
 
 Build a progressive web app (PWA) that captures video/audio/GPS, stores encrypted content to decentralized infrastructure, and provides trusted contacts with access via wallet-addressed cryptographic identity.

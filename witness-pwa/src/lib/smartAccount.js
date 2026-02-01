@@ -3,7 +3,7 @@
  * Wraps Privy EOA into Kernel smart account with Pimlico paymaster
  */
 import { createPublicClient, createWalletClient, custom, http } from 'viem';
-import { sepolia } from 'viem/chains';
+import { baseSepolia } from 'viem/chains';
 import { entryPoint07Address } from 'viem/account-abstraction';
 import { createSmartAccountClient } from 'permissionless';
 import { toKernelSmartAccount } from 'permissionless/accounts';
@@ -23,17 +23,17 @@ function getPimlicoUrl() {
   if (!apiKey) {
     throw new Error('Missing VITE_PIMLICO_API_KEY in .env');
   }
-  return `https://api.pimlico.io/v2/11155111/rpc?apikey=${apiKey}`;
+  return `https://api.pimlico.io/v2/84532/rpc?apikey=${apiKey}`;
 }
 
 /**
- * Initialize public client for Sepolia
+ * Initialize public client for Base Sepolia
  * @returns {object} Viem public client
  */
 export function getPublicClient() {
   if (!publicClient) {
     publicClient = createPublicClient({
-      chain: sepolia,
+      chain: baseSepolia,
       transport: http(),
     });
   }
@@ -67,7 +67,7 @@ export function getPimlicoClient() {
 function createOwnerFromProvider(provider, address) {
   return createWalletClient({
     account: address,
-    chain: sepolia,
+    chain: baseSepolia,
     transport: custom(provider),
   });
 }
@@ -108,7 +108,7 @@ export function createGaslessClient(kernelAccount) {
 
   smartAccountClient = createSmartAccountClient({
     account: kernelAccount,
-    chain: sepolia,
+    chain: baseSepolia,
     bundlerTransport: http(getPimlicoUrl()),
     paymaster: pimlico,
     userOperation: {
