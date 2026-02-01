@@ -9,3 +9,4 @@ export { UploadQueue } from './UploadQueue.js';
 export { ManifestManager } from './ManifestManager.js';
 export { SessionManager } from './SessionManager.js';
 export { db as streamingDb } from './streamingDb.js';
+export * from './RecoveryService.js';

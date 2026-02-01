@@ -14,6 +14,9 @@ import { showEncryptionTest } from './ui/encryptionTest.js';
 import { showGroupsModal } from './ui/groupsModal.js';
 import { showUploadModal } from './ui/uploadModal.js';
 import { showContentBrowser } from './ui/contentBrowser.js';
+import { showRecoveryDialog } from './ui/recoveryDialog.js';
+import { showStorageWarning } from './ui/storageWarning.js';
+import { initRecovery } from './lib/streaming/RecoveryService.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
@@ -618,6 +621,30 @@ logoutBtn.addEventListener('click', async () => {
 async function init() {
     // Initialize login modal and check session
     const authenticated = await initLoginModal();
+
+    // Check for incomplete recording sessions (crash recovery)
+    if (authenticated) {
+        try {
+            const recovery = await initRecovery();
+            console.log('[main] Recovery check:', recovery);
+
+            if (recovery.needsRecovery) {
+                // Show recovery dialog - user must choose to resume or discard
+                // Note: uploadQueue would be passed here when streaming is active
+                await showRecoveryDialog(recovery.recoverySummary, null, () => {
+                    console.log('[main] Recovery complete');
+                });
+            }
+
+            // Warn if storage is getting low
+            if (recovery.storageStatus.isLow) {
+                showStorageWarning(recovery.storageStatus);
+            }
+        } catch (err) {
+            console.error('[main] Recovery check failed:', err);
+            // Continue anyway - don't block app startup
+        }
+    }
 
     // Subscribe to auth state changes
     subscribeToAuth((state) => {

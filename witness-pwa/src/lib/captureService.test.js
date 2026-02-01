@@ -139,3 +139,16 @@ if (typeof window !== 'undefined') {
   window.runCaptureTests = runCaptureTests;
   window.manualCaptureTest = manualCaptureTest;
 }
+
+// Vitest requires at least one test - browser-dependent tests run manually
+import { describe, it, expect } from 'vitest';
+
+describe('CaptureService', () => {
+  it('exports getSupportedMimeType function', () => {
+    expect(typeof getSupportedMimeType).toBe('function');
+  });
+
+  it('exports CaptureService class', () => {
+    expect(typeof CaptureService).toBe('function');
+  });
+});
