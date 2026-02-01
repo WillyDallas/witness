@@ -51,11 +51,21 @@ export async function deriveChunkKey(sessionKey, chunkIndex) {
  *
  * @param {ArrayBuffer} encryptedData - The encrypted chunk data
  * @param {CryptoKey} chunkKey - The derived chunk key
- * @param {string} ivHex - The IV as hex string (from manifest)
+ * @param {string} ivString - The IV as base64 or hex string (from manifest)
  * @returns {Promise<ArrayBuffer>} Decrypted chunk data
  */
-export async function decryptChunk(encryptedData, chunkKey, ivHex) {
-  const iv = hexToBytes(ivHex);
+export async function decryptChunk(encryptedData, chunkKey, ivString) {
+  // Detect if IV is base64 or hex based on format
+  // Base64 for 12 bytes is 16 chars, hex for 12 bytes is 24 chars
+  // Also base64 may contain +, /, = which aren't valid hex
+  let iv;
+  if (ivString.length === 16 || /[+/=]/.test(ivString) || !/^[0-9a-fA-F]+$/.test(ivString)) {
+    // Base64 format (from ChunkProcessor)
+    iv = base64ToBytes(ivString);
+  } else {
+    // Hex format (legacy)
+    iv = hexToBytes(ivString);
+  }
 
   const decrypted = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv },
@@ -64,6 +74,18 @@ export async function decryptChunk(encryptedData, chunkKey, ivHex) {
   );
 
   return decrypted;
+}
+
+/**
+ * Convert base64 string to Uint8Array
+ */
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 /**

@@ -314,7 +314,10 @@ contract WitnessRegistry {
         ISemaphore.SemaphoreProof calldata proof
     ) external {
         // Verify content is shared with this group
+        // Check both contentGroups (regular content) and sessionGroups (streaming sessions)
         bool inGroup = false;
+
+        // Check regular content groups
         bytes32[] memory groups_ = contentGroups[contentId];
         for (uint256 i = 0; i < groups_.length; i++) {
             if (groups_[i] == groupId) {
@@ -322,6 +325,18 @@ contract WitnessRegistry {
                 break;
             }
         }
+
+        // Also check session groups (for streaming content)
+        if (!inGroup) {
+            bytes32[] memory sessionGroups_ = sessionGroups[contentId];
+            for (uint256 i = 0; i < sessionGroups_.length; i++) {
+                if (sessionGroups_[i] == groupId) {
+                    inGroup = true;
+                    break;
+                }
+            }
+        }
+
         if (!inGroup) revert ContentNotInGroup();
 
         // Check nullifier not used (prevents double attestation)

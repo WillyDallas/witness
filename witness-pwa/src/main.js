@@ -23,7 +23,7 @@ import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/au
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
 import { requestGPSPermission } from './lib/permissions.js';
-import { hasDefaultGroups, getDefaultGroupIds } from './lib/settingsStorage.js';
+import { hasDefaultGroups } from './lib/settingsStorage.js';
 import { showSettingsModal } from './ui/settingsModal.js';
 
 // DOM Elements
@@ -404,8 +404,8 @@ function handleRecordButtonClick() {
         return;
     }
 
-    // Start recording immediately with default groups
-    startRecordingScreen(getDefaultGroupIds(), {
+    // Start recording immediately with default groups from settings
+    startRecordingScreen({
         onComplete: (result) => {
             if (result.action === 'view') {
                 // Navigate to content detail

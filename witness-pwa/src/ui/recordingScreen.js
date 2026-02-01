@@ -5,6 +5,9 @@
 
 import { SessionManager, createWiredCapture } from '../lib/streaming/SessionManager.js';
 import { getAddress, getEncryptionKey } from '../lib/authState.js';
+import { generateContentKey, wrapContentKey, bytesToHex, hexToBytes } from '../lib/encryption.js';
+import { getGroupSecrets } from '../lib/storage.js';
+import { getDefaultGroupIds } from '../lib/settingsStorage.js';
 
 // DOM elements
 let screenEl = null;
@@ -215,15 +218,21 @@ async function stopRecording() {
 
 /**
  * Start the recording screen
- * @param {string[]} groupIds - Selected group IDs
  * @param {Object} options - Optional callbacks
  * @param {Function} options.onComplete - Called when recording ends with session result
  */
-export async function startRecordingScreen(groupIds, options = {}) {
-    selectedGroupIds = groupIds;
+export async function startRecordingScreen(options = {}) {
     onComplete = options.onComplete || null;
 
     initElements();
+
+    // Get groups from settings
+    const groupIds = getDefaultGroupIds();
+    if (groupIds.length === 0) {
+        throw new Error('No groups selected. Please select at least one group in Settings.');
+    }
+    selectedGroupIds = groupIds;
+    console.log('[RecordingScreen] Using groups from settings:', groupIds.map(g => g.slice(0, 10) + '...'));
 
     // Reset UI state
     if (timeEl) timeEl.textContent = '0:00';
@@ -235,18 +244,44 @@ export async function startRecordingScreen(groupIds, options = {}) {
 
     // Get auth state
     const uploader = getAddress();
-    const sessionKey = getEncryptionKey();
+    const encryptionKey = getEncryptionKey();
 
-    if (!uploader || !sessionKey) {
+    if (!uploader || !encryptionKey) {
         console.error('[RecordingScreen] Missing auth state');
         throw new Error('Authentication required');
     }
 
-    // Create session manager
+    // Generate a random session key for this recording
+    const sessionKey = await generateContentKey();
+    console.log('[RecordingScreen] Generated session key for recording');
+
+    // Wrap session key for each selected group
+    const accessList = {};
+    const secrets = await getGroupSecrets(encryptionKey);
+
+    for (const groupId of groupIds) {
+        const groupData = secrets[groupId];
+        if (!groupData) {
+            console.error(`[RecordingScreen] Group secret not found for ${groupId.slice(0, 10)}...`);
+            throw new Error(`Group secret not found. Please rejoin the group.`);
+        }
+
+        const groupSecret = hexToBytes(groupData.secretHex);
+        const { iv: wrapIv, wrappedKey } = await wrapContentKey(sessionKey, groupSecret);
+
+        accessList[groupId] = {
+            wrappedKey: bytesToHex(new Uint8Array(wrappedKey)),
+            iv: bytesToHex(wrapIv),
+        };
+        console.log(`[RecordingScreen] Wrapped session key for group ${groupId.slice(0, 10)}...`);
+    }
+
+    // Create session manager with accessList
     sessionManager = await SessionManager.create({
         groupIds,
         uploader,
-        sessionKey
+        sessionKey,
+        accessList
     });
 
     // Create wired capture service (automatically routes chunks to session)

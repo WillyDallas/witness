@@ -157,9 +157,8 @@ export async function isNullifierUsed(nullifier) {
   return contract.read.nullifierUsed([nullifier]);
 }
 
-// Starting block for log queries - Base Sepolia recent history
-// Using a block from ~2 weeks ago to avoid expensive full-chain queries
-const LOG_START_BLOCK = 35000000n;
+// Starting block for log queries - WitnessRegistry deployment block
+const LOG_START_BLOCK = BigInt(import.meta.env.VITE_WITNESS_REGISTRY_DEPLOY_BLOCK || 0);
 
 /**
  * Fetch all identity commitments for a Semaphore group

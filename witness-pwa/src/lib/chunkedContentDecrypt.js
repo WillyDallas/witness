@@ -80,12 +80,17 @@ export async function downloadAndDecryptChunked(contentId, manifestCID, onChainM
       ? manifest.merkleRoot.slice(2)
       : manifest.merkleRoot;
 
+    // DIAGNOSTIC: Always log merkle roots for debugging
+    console.log('[chunkedDecrypt] DIAGNOSTIC - On-chain merkle root:', onChainMerkleRoot);
+    console.log('[chunkedDecrypt] DIAGNOSTIC - Manifest merkle root:', manifest.merkleRoot);
+
     const merkleRootVerified = cleanManifestRoot.toLowerCase() === cleanOnChainRoot.toLowerCase();
+    console.log('[chunkedDecrypt] DIAGNOSTIC - Merkle roots match:', merkleRootVerified);
 
     if (!merkleRootVerified) {
       console.warn('[chunkedDecrypt] Merkle root mismatch!');
-      console.warn('[chunkedDecrypt] On-chain:', cleanOnChainRoot);
-      console.warn('[chunkedDecrypt] Manifest:', cleanManifestRoot);
+      console.warn('[chunkedDecrypt] On-chain (cleaned):', cleanOnChainRoot);
+      console.warn('[chunkedDecrypt] Manifest (cleaned):', cleanManifestRoot);
     }
 
     // Step 3: Unwrap session key
@@ -98,6 +103,17 @@ export async function downloadAndDecryptChunked(contentId, manifestCID, onChainM
 
     const groupSecrets = await getGroupSecrets(encryptionKey);
     const accessList = manifest.accessList || {};
+
+    // DIAGNOSTIC: Log what we have vs what we need
+    console.log('[chunkedDecrypt] DIAGNOSTIC - accessList groupIds:', Object.keys(accessList));
+    console.log('[chunkedDecrypt] DIAGNOSTIC - groupSecrets groupIds:', Object.keys(groupSecrets));
+    for (const groupId of Object.keys(accessList)) {
+      console.log('[chunkedDecrypt] DIAGNOSTIC - checking groupId:', groupId);
+      console.log('[chunkedDecrypt] DIAGNOSTIC - has secret?:', !!groupSecrets[groupId]);
+      if (groupSecrets[groupId]) {
+        console.log('[chunkedDecrypt] DIAGNOSTIC - secret groupId stored as:', groupSecrets[groupId].groupId);
+      }
+    }
 
     let sessionKey = null;
 
@@ -187,8 +203,11 @@ export async function downloadAndDecryptChunked(contentId, manifestCID, onChainM
         verifications
       });
 
+      console.log(`[chunkedDecrypt] DIAGNOSTIC - Decrypting chunk ${i}, index=${chunk.index}, iv=${chunk.iv?.slice(0, 20)}...`);
       const chunkKey = await deriveChunkKey(sessionKey, chunk.index);
+      console.log(`[chunkedDecrypt] DIAGNOSTIC - Derived chunk key for chunk ${i}`);
       const decryptedData = await decryptChunk(encryptedData.buffer, chunkKey, chunk.iv);
+      console.log(`[chunkedDecrypt] DIAGNOSTIC - Decrypted chunk ${i}: ${decryptedData?.byteLength} bytes`);
 
       // Verify plaintext hash
       const plaintextHash = await computeHash(decryptedData);

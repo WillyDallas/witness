@@ -227,8 +227,12 @@ function renderChunkedVideo(videoBlob) {
     decryptedUrl = null;
   }
 
+  // DIAGNOSTIC: Log blob details
+  console.log('[contentDetail] DIAGNOSTIC - Video blob size:', videoBlob.size, 'type:', videoBlob.type);
+
   // Create object URL for video blob
   decryptedUrl = URL.createObjectURL(videoBlob);
+  console.log('[contentDetail] DIAGNOSTIC - Video URL created:', decryptedUrl);
 
   previewEl.innerHTML = `
     <video controls class="video-preview" playsinline>
@@ -236,6 +240,13 @@ function renderChunkedVideo(videoBlob) {
       Your browser does not support video playback.
     </video>
   `;
+
+  // Add error handler to video element
+  const videoEl = previewEl.querySelector('video');
+  videoEl.onerror = (e) => {
+    console.error('[contentDetail] Video playback error:', e);
+    console.error('[contentDetail] Video error code:', videoEl.error?.code, 'message:', videoEl.error?.message);
+  };
 
   previewEl.classList.remove('hidden');
 }
