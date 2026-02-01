@@ -145,6 +145,37 @@ export class CaptureService {
   }
 
   /**
+   * Handle track ended event (camera disconnected, etc.)
+   * @param {Event} event
+   */
+  _handleTrackEnded(event) {
+    console.error('[CaptureService] Track ended:', event.target.kind);
+
+    // Stop recording gracefully
+    if (this.recorder && this.recorder.state !== 'inactive') {
+      try {
+        this.recorder.stop();
+      } catch (err) {
+        console.error('[CaptureService] Error stopping after track ended:', err);
+      }
+    }
+
+    this.onError(new Error(`${event.target.kind} track ended unexpectedly`));
+    this._setState('stopped');
+  }
+
+  /**
+   * Attach track event listeners
+   */
+  _attachTrackListeners() {
+    if (!this.stream) return;
+
+    this.stream.getTracks().forEach(track => {
+      track.addEventListener('ended', (e) => this._handleTrackEnded(e));
+    });
+  }
+
+  /**
    * Handle dataavailable event from MediaRecorder
    * @param {BlobEvent} event
    */
@@ -229,6 +260,9 @@ export class CaptureService {
       if (!this.stream) {
         await this._initStream();
       }
+
+      // Attach track listeners for error handling
+      this._attachTrackListeners();
 
       // Start GPS tracking (non-blocking)
       this._startGPS();
