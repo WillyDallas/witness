@@ -139,4 +139,83 @@ contract WitnessRegistry {
     function getGroupMemberCount(bytes32 groupId) external view returns (uint256) {
         return _groupMemberList[groupId].length;
     }
+
+    // ============================================
+    // CONTENT COMMITMENT
+    // ============================================
+
+    /**
+     * @notice Commit content to the registry
+     * @param contentId Unique identifier for the content
+     * @param merkleRoot Merkle root of content chunks
+     * @param manifestCID IPFS CID of the content manifest
+     * @param groupIds Groups to share this content with
+     * @dev Caller must be registered and member of all specified groups
+     */
+    function commitContent(
+        bytes32 contentId,
+        bytes32 merkleRoot,
+        string calldata manifestCID,
+        bytes32[] calldata groupIds
+    ) external {
+        if (!registered[msg.sender]) revert NotRegistered();
+        if (content[contentId].timestamp != 0) revert ContentAlreadyExists();
+        if (bytes(manifestCID).length == 0) revert EmptyManifestCID();
+        if (groupIds.length == 0) revert NoGroupsSpecified();
+
+        // Verify caller is member of all groups
+        for (uint256 i = 0; i < groupIds.length; i++) {
+            if (!groupMembers[groupIds[i]][msg.sender]) revert NotMember();
+        }
+
+        // Store content commitment
+        content[contentId] = ContentCommitment({
+            merkleRoot: merkleRoot,
+            manifestCID: manifestCID,
+            uploader: msg.sender,
+            timestamp: uint64(block.timestamp)
+        });
+
+        // Index content under each group
+        for (uint256 i = 0; i < groupIds.length; i++) {
+            contentGroups[contentId].push(groupIds[i]);
+            groupContent[groupIds[i]].push(contentId);
+        }
+
+        // Index under user
+        userContent[msg.sender].push(contentId);
+
+        emit ContentCommitted(contentId, msg.sender, merkleRoot, manifestCID, uint64(block.timestamp));
+    }
+
+    // ============================================
+    // VIEW FUNCTIONS
+    // ============================================
+
+    /**
+     * @notice Get all content IDs for a user
+     * @param user The user address
+     * @return Array of content IDs
+     */
+    function getUserContent(address user) external view returns (bytes32[] memory) {
+        return userContent[user];
+    }
+
+    /**
+     * @notice Get all content IDs for a group
+     * @param groupId The group ID
+     * @return Array of content IDs
+     */
+    function getGroupContent(bytes32 groupId) external view returns (bytes32[] memory) {
+        return groupContent[groupId];
+    }
+
+    /**
+     * @notice Get all groups a content is shared with
+     * @param contentId The content ID
+     * @return Array of group IDs
+     */
+    function getContentGroups(bytes32 contentId) external view returns (bytes32[] memory) {
+        return contentGroups[contentId];
+    }
 }
