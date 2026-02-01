@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "keywords": [
     "pwa",
@@ -18,7 +19,8 @@
   "license": "ISC",
   "devDependencies": {
     "vite": "^7.3.1",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@privy-io/js-sdk-core": "^0.60.0",
