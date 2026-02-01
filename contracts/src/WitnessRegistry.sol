@@ -26,6 +26,15 @@ contract WitnessRegistry {
         uint64 timestamp;
     }
 
+    struct Session {
+        address creator;
+        bytes32 merkleRoot;
+        string manifestCid;
+        uint256 chunkCount;
+        uint64 createdAt;
+        uint64 updatedAt;
+    }
+
     // ============================================
     // STATE VARIABLES
     // ============================================
@@ -50,6 +59,10 @@ contract WitnessRegistry {
     mapping(bytes32 => bytes32[]) public contentGroups;
     mapping(bytes32 => bytes32[]) public groupContent;
     mapping(address => bytes32[]) public userContent;
+
+    // Session management (streaming video)
+    mapping(bytes32 => Session) public sessions;
+    mapping(bytes32 => bytes32[]) public sessionGroups;
 
     // Attestations
     mapping(bytes32 => uint256) public attestationCount; // contentId => count
