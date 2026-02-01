@@ -8,7 +8,12 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": ["pwa", "privacy", "evidence", "witness"],
+  "keywords": [
+    "pwa",
+    "privacy",
+    "evidence",
+    "witness"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
@@ -17,6 +22,8 @@
   },
   "dependencies": {
     "@privy-io/js-sdk-core": "^0.60.0",
+    "buffer": "^6.0.3",
+    "ox": "^0.8.9",
     "permissionless": "^0.2.57",
     "viem": "^2.45.1"
   }

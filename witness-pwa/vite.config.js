@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   root: '.',
   publicDir: 'public',
+  envDir: '..',  // Load .env from project root
   build: {
     outDir: 'dist',
     emptyOutDir: true,

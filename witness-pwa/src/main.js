@@ -4,6 +4,11 @@
  * This module handles video capture with touch-hold recording.
  * Authentication and encryption are handled by the auth modules.
  */
+
+// Polyfill Node.js Buffer for browser (required by Privy SDK)
+import { Buffer } from 'buffer';
+globalThis.Buffer = Buffer;
+
 import { initLoginModal, showLoginModal } from './ui/loginModal.js';
 import { isReady, subscribeToAuth, clearAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
