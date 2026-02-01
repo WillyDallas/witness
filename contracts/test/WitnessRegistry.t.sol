@@ -260,6 +260,26 @@ contract WitnessRegistryTest is Test {
         assertGe(updatedAt, createdAt);
     }
 
+    function test_UpdateSession_EmitsEvent() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, true);
+        emit WitnessRegistry.SessionUpdated(
+            TEST_SESSION_ID,
+            alice,
+            TEST_MERKLE_ROOT,
+            TEST_MANIFEST_CID,
+            1,
+            groupIds,
+            block.timestamp
+        );
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+    }
+
     // ============================================
     // CONTENT COMMITMENT TESTS
     // ============================================
