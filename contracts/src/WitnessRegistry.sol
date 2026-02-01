@@ -71,4 +71,21 @@ contract WitnessRegistry {
     error ContentAlreadyExists();
     error EmptyManifestCID();
     error NoGroupsSpecified();
+
+    // ============================================
+    // USER REGISTRATION
+    // ============================================
+
+    /**
+     * @notice Register the caller as a Witness Protocol user
+     * @dev Emits UserRegistered event
+     */
+    function register() external {
+        if (registered[msg.sender]) revert AlreadyRegistered();
+
+        registered[msg.sender] = true;
+        registeredAt[msg.sender] = uint64(block.timestamp);
+
+        emit UserRegistered(msg.sender, uint64(block.timestamp));
+    }
 }
