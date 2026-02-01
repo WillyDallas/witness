@@ -183,6 +183,49 @@ contract WitnessRegistryTest is Test {
     bytes32 public constant TEST_MERKLE_ROOT = keccak256("merkle-root-data");
     string public constant TEST_MANIFEST_CID = "QmTestManifestCID123456789";
 
+    // ============================================
+    // SESSION TESTS
+    // ============================================
+
+    bytes32 public constant TEST_SESSION_ID = keccak256("test-session-id");
+
+    function _setupForSession() internal {
+        vm.prank(alice);
+        registry.register();
+        vm.prank(alice);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
+    }
+
+    function test_UpdateSession_CreatesNewSession() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+
+        (
+            address creator,
+            bytes32 merkleRoot,
+            string memory manifestCid,
+            uint256 chunkCount,
+            uint64 createdAt,
+            uint64 updatedAt
+        ) = registry.sessions(TEST_SESSION_ID);
+
+        assertEq(creator, alice);
+        assertEq(merkleRoot, TEST_MERKLE_ROOT);
+        assertEq(manifestCid, TEST_MANIFEST_CID);
+        assertEq(chunkCount, 1);
+        assertGt(createdAt, 0);
+        assertEq(createdAt, updatedAt);
+    }
+
+    // ============================================
+    // CONTENT COMMITMENT TESTS
+    // ============================================
+
     function _setupGroupWithMembers() internal {
         vm.prank(alice);
         registry.register();
