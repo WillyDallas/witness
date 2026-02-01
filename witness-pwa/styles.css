@@ -1582,6 +1582,70 @@ html, body {
   font-size: 0.9rem;
 }
 
+/* Chunk Progress */
+.chunk-progress {
+  margin-top: 1rem;
+  width: 100%;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.chunk-progress-bar {
+  height: 4px;
+  background: var(--primary-color);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.chunk-progress-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* Chunk Info Section */
+.chunk-info {
+  background: var(--bg-surface);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.chunk-info-header {
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  color: var(--text-light);
+}
+
+.chunk-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chunk-info-row:last-child {
+  border-bottom: none;
+}
+
+.chunk-info-label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.chunk-info-value {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.chunk-info-value.status-warning {
+  color: var(--warning-color, #f59e0b);
+}
+
 .preview-content {
   width: 100%;
 }
