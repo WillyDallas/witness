@@ -1218,3 +1218,191 @@ html, body {
   font-size: 0.9rem;
   text-align: center;
 }
+
+/* ============================================
+   Upload Modal
+============================================ */
+
+.upload-modal {
+  max-width: 450px;
+}
+
+.upload-section {
+  margin-bottom: 1.25rem;
+}
+
+.upload-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-light);
+}
+
+.upload-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.upload-textarea:focus {
+  outline: none;
+  border-color: var(--red-accent);
+}
+
+.upload-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Group Selection */
+.upload-groups-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.group-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.group-checkbox:hover {
+  background: var(--bg-surface-hover);
+}
+
+.group-check-input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--red-accent);
+}
+
+.group-check-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.group-check-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Progress Bar */
+.upload-progress {
+  margin-top: 1rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--red-accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-message {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* Result Display */
+.upload-result {
+  margin-top: 1rem;
+}
+
+.result-success {
+  text-align: center;
+  padding: 1rem;
+  background: var(--bg-surface);
+  border-radius: 12px;
+}
+
+.result-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.result-success h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-light);
+}
+
+.result-details {
+  text-align: left;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+.result-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.result-value {
+  font-family: monospace;
+  font-size: 0.85rem;
+  background: var(--bg-dark);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.result-link {
+  color: var(--red-accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.result-link:hover {
+  text-decoration: underline;
+}
+
+/* Configuration Warning */
+.config-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.warning-icon {
+  font-size: 1.25rem;
+}
+
+.config-warning p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}

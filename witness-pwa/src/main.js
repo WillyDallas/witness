@@ -12,6 +12,7 @@ globalThis.Buffer = Buffer;
 import { initLoginModal, showLoginModal } from './ui/loginModal.js';
 import { showEncryptionTest } from './ui/encryptionTest.js';
 import { showGroupsModal } from './ui/groupsModal.js';
+import { showUploadModal } from './ui/uploadModal.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
@@ -557,6 +558,15 @@ if (groupsBtn) {
     groupsBtn.addEventListener('click', () => {
         closeDrawer();
         showGroupsModal();
+    });
+}
+
+// Upload button handler
+const uploadBtnDrawer = document.getElementById('upload-btn-drawer');
+if (uploadBtnDrawer) {
+    uploadBtnDrawer.addEventListener('click', () => {
+        closeDrawer();
+        showUploadModal();
     });
 }
 

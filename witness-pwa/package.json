@@ -26,6 +26,7 @@
     "html5-qrcode": "^2.3.8",
     "ox": "^0.8.9",
     "permissionless": "^0.2.57",
+    "pinata": "^2.5.3",
     "qrcode": "^1.5.4",
     "viem": "^2.45.1"
   }
