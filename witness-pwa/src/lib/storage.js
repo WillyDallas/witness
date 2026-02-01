@@ -9,6 +9,8 @@ import { encrypt, decrypt, hexToBytes, bytesToHex } from './encryption.js';
 const STORAGE_KEYS = {
   GROUP_SECRETS: 'witness_group_secrets',
   RECORDINGS_META: 'witness_recordings',
+  LOCAL_ATTESTATIONS: 'witness_local_attestations',
+  SEMAPHORE_IDENTITY: 'witness_semaphore_identity',
 };
 
 // ============================================
@@ -167,4 +169,6 @@ export async function removeGroupSecret(groupId, encryptionKey) {
  */
 export function clearSecureStorage() {
   localStorage.removeItem(STORAGE_KEYS.GROUP_SECRETS);
+  localStorage.removeItem(STORAGE_KEYS.LOCAL_ATTESTATIONS);
+  localStorage.removeItem(STORAGE_KEYS.SEMAPHORE_IDENTITY);
 }

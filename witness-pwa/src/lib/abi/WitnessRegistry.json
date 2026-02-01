@@ -1,5 +1,90 @@
 [
   {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_semaphore",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "attestToContent",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "groupId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "proof",
+        "type": "tuple",
+        "internalType": "struct ISemaphore.SemaphoreProof",
+        "components": [
+          {
+            "name": "merkleTreeDepth",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "merkleTreeRoot",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "nullifier",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "message",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "scope",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "points",
+            "type": "uint256[8]",
+            "internalType": "uint256[8]"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "attestationCount",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "function",
     "name": "commitContent",
     "inputs": [
@@ -93,10 +178,34 @@
         "name": "groupId",
         "type": "bytes32",
         "internalType": "bytes32"
+      },
+      {
+        "name": "identityCommitment",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getAttestationCount",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -259,10 +368,34 @@
         "name": "groupId",
         "type": "bytes32",
         "internalType": "bytes32"
+      },
+      {
+        "name": "identityCommitment",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "nullifierUsed",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -311,6 +444,38 @@
   },
   {
     "type": "function",
+    "name": "semaphore",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ISemaphore"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "semaphoreGroupId",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "userContent",
     "inputs": [
       {
@@ -332,6 +497,37 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AttestationCreated",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "groupId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "newCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -387,6 +583,12 @@
         "internalType": "address"
       },
       {
+        "name": "semaphoreGroupId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
         "name": "timestamp",
         "type": "uint64",
         "indexed": false,
@@ -410,6 +612,12 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "identityCommitment",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
       {
         "name": "timestamp",
@@ -456,6 +664,11 @@
   },
   {
     "type": "error",
+    "name": "ContentNotInGroup",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EmptyManifestCID",
     "inputs": []
   },
@@ -471,6 +684,11 @@
   },
   {
     "type": "error",
+    "name": "InvalidProof",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NoGroupsSpecified",
     "inputs": []
   },
@@ -482,6 +700,11 @@
   {
     "type": "error",
     "name": "NotRegistered",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NullifierAlreadyUsed",
     "inputs": []
   }
 ]

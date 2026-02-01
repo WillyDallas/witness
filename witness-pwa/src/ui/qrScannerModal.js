@@ -6,6 +6,7 @@
 import { Html5Qrcode } from 'html5-qrcode';
 import { parseInviteQR, joinGroupFromInvite } from '../lib/groups.js';
 import { refreshGroupsList } from './groupsModal.js';
+import { getAuthState } from '../lib/authState.js';
 
 let modal = null;
 let scanner = null;
@@ -221,7 +222,13 @@ async function handleJoinGroup() {
   document.getElementById('joining-status').textContent = 'Submitting transaction...';
 
   try {
-    await joinGroupFromInvite(pendingInvite);
+    // Get provider and EOA address for identity commitment
+    const { provider, wallet } = getAuthState();
+    if (!provider || !wallet?.address) {
+      throw new Error('Wallet not ready');
+    }
+
+    await joinGroupFromInvite(pendingInvite, provider, wallet.address);
 
     document.getElementById('success-group-name').textContent = pendingInvite.groupName;
     showView('success');

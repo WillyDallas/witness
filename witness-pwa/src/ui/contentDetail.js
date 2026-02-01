@@ -6,6 +6,8 @@
 import { getAuthState } from '../lib/authState.js';
 import { getGroupNames } from '../lib/contentDiscovery.js';
 import { downloadAndDecrypt, toDataUrl, detectContentType } from '../lib/contentDecrypt.js';
+import { createAttestationPanel, initAttestationPanel, refreshAttestationCount } from './attestationPanel.js';
+import { fetchAttestationCount } from '../lib/attestation.js';
 
 let modal = null;
 let currentItem = null;
@@ -67,6 +69,9 @@ function createModal() {
             </div>
           </div>
         </div>
+
+        <!-- Attestation Panel (loaded dynamically) -->
+        <div id="attestation-container"></div>
 
         <!-- Actions -->
         <div class="content-actions">
@@ -155,6 +160,28 @@ function renderPreview(data, mimeType) {
 }
 
 /**
+ * Load and display attestation panel
+ */
+async function loadAttestationPanel(contentId, groupIds) {
+  const container = document.getElementById('attestation-container');
+  if (!container) return;
+
+  try {
+    // Get attestation count from chain
+    const count = await fetchAttestationCount(contentId);
+
+    // Create and insert panel HTML
+    container.innerHTML = createAttestationPanel(contentId, groupIds, count);
+
+    // Initialize panel with group data
+    await initAttestationPanel(contentId, groupIds);
+  } catch (err) {
+    console.error('[contentDetail] Failed to load attestation panel:', err);
+    container.innerHTML = ''; // Clear on error
+  }
+}
+
+/**
  * Load and display content
  */
 async function loadContent(item) {
@@ -205,6 +232,9 @@ async function loadContent(item) {
     renderPreview(result.data, mimeType);
 
     loadingEl.classList.add('hidden');
+
+    // Load attestation panel
+    await loadAttestationPanel(item.contentId, item.groupIds);
   } catch (err) {
     loadingEl.classList.add('hidden');
     errorEl.textContent = err.message;
@@ -254,6 +284,7 @@ export function showContentDetail(item) {
     <span class="verify-icon">⏳</span>
     <span class="verify-text">On-chain record</span>
   `;
+  document.getElementById('attestation-container').innerHTML = '';
 
   modal.classList.remove('hidden');
   loadContent(item);

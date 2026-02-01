@@ -2,7 +2,7 @@
  * Smart Account module for Witness Protocol
  * Wraps Privy EOA into Kernel smart account with Pimlico paymaster
  */
-import { createPublicClient, createWalletClient, custom, http } from 'viem';
+import { createPublicClient, createWalletClient, custom, http, fallback } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { entryPoint07Address } from 'viem/account-abstraction';
 import { createSmartAccountClient } from 'permissionless';
@@ -13,6 +13,15 @@ import { createPimlicoClient } from 'permissionless/clients/pimlico';
 let publicClient = null;
 let pimlicoClient = null;
 let smartAccountClient = null;
+
+// Base Sepolia RPC endpoints with fallbacks
+// Base's public RPC (sepolia.base.org) removed due to ongoing outage
+const BASE_SEPOLIA_RPCS = [
+  'https://base-sepolia.drpc.org',
+  'https://base-sepolia-rpc.publicnode.com',
+  'https://base-sepolia.blockpi.network/v1/rpc/public',
+  'https://base-sepolia.gateway.tenderly.co',
+];
 
 /**
  * Get the Pimlico bundler/paymaster URL
@@ -27,14 +36,17 @@ function getPimlicoUrl() {
 }
 
 /**
- * Initialize public client for Base Sepolia
+ * Initialize public client for Base Sepolia with fallback RPCs
  * @returns {object} Viem public client
  */
 export function getPublicClient() {
   if (!publicClient) {
     publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http(),
+      transport: fallback(
+        BASE_SEPOLIA_RPCS.map(url => http(url)),
+        { rank: false, retryCount: 2 }
+      ),
     });
   }
   return publicClient;

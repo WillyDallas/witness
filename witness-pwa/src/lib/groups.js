@@ -7,6 +7,7 @@ import { generateGroupSecret, deriveGroupId, bytesToHex, hexToBytes } from './en
 import { createGroup as contractCreateGroup, joinGroup as contractJoinGroup, waitForTransaction, isGroupMember, getGroup } from './contract.js';
 import { setGroupSecret, getGroupSecrets, getGroupSecret } from './storage.js';
 import { getAuthState } from './authState.js';
+import { getOrCreateIdentity, getCommitment } from './identity.js';
 
 // Chain configuration
 const CHAIN_ID = import.meta.env.VITE_CHAIN_ID || 84532;
@@ -25,9 +26,11 @@ const REGISTRY_ADDRESS = import.meta.env.VITE_WITNESS_REGISTRY_ADDRESS;
 /**
  * Create a new group
  * @param {string} name - Human-readable group name
+ * @param {object} provider - Privy embedded wallet provider
+ * @param {string} eoaAddress - EOA wallet address for identity derivation
  * @returns {Promise<{groupId: string, txHash: string}>}
  */
-export async function createNewGroup(name) {
+export async function createNewGroup(name, provider, eoaAddress) {
   const { encryptionKey, smartAccountAddress } = getAuthState();
 
   if (!encryptionKey) {
@@ -38,14 +41,18 @@ export async function createNewGroup(name) {
     throw new Error('Smart account not initialized');
   }
 
+  // Get or create Semaphore identity
+  const identity = await getOrCreateIdentity(provider, eoaAddress, encryptionKey);
+  const identityCommitment = getCommitment(identity);
+
   // Generate random group secret
   const secret = generateGroupSecret();
   const groupId = await deriveGroupId(secret);
 
   console.log('[groups] Creating group:', name, groupId.slice(0, 18) + '...');
 
-  // Submit on-chain transaction
-  const txHash = await contractCreateGroup(groupId);
+  // Submit on-chain transaction with identity commitment
+  const txHash = await contractCreateGroup(groupId, identityCommitment);
   console.log('[groups] Waiting for confirmation...');
 
   // Wait for confirmation
@@ -62,9 +69,11 @@ export async function createNewGroup(name) {
 /**
  * Join an existing group from invite
  * @param {GroupInvite} invite - Parsed invite data
+ * @param {object} provider - Privy embedded wallet provider
+ * @param {string} eoaAddress - EOA wallet address for identity derivation
  * @returns {Promise<{txHash: string}>}
  */
-export async function joinGroupFromInvite(invite) {
+export async function joinGroupFromInvite(invite, provider, eoaAddress) {
   const { encryptionKey, smartAccountAddress } = getAuthState();
 
   if (!encryptionKey) {
@@ -96,10 +105,14 @@ export async function joinGroupFromInvite(invite) {
     throw new Error('Group does not exist or is inactive');
   }
 
+  // Get or create Semaphore identity
+  const identity = await getOrCreateIdentity(provider, eoaAddress, encryptionKey);
+  const identityCommitment = getCommitment(identity);
+
   console.log('[groups] Joining group:', invite.groupName);
 
-  // Submit on-chain transaction
-  const txHash = await contractJoinGroup(invite.groupId);
+  // Submit on-chain transaction with identity commitment
+  const txHash = await contractJoinGroup(invite.groupId, identityCommitment);
   console.log('[groups] Waiting for confirmation...');
 
   // Wait for confirmation

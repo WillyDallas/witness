@@ -187,7 +187,13 @@ async function handleCreateGroup() {
   statusEl.classList.remove('hidden');
 
   try {
-    const { groupId } = await createNewGroup(name);
+    // Get provider and EOA address for identity commitment
+    const { provider, wallet } = getAuthState();
+    if (!provider || !wallet?.address) {
+      throw new Error('Wallet not ready');
+    }
+
+    const { groupId } = await createNewGroup(name, provider, wallet.address);
 
     statusEl.textContent = 'Group created!';
 

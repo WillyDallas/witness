@@ -22,6 +22,10 @@
   },
   "dependencies": {
     "@privy-io/js-sdk-core": "^0.60.0",
+    "@semaphore-protocol/core": "^4.14.2",
+    "@semaphore-protocol/group": "^4.14.2",
+    "@semaphore-protocol/identity": "^4.14.2",
+    "@semaphore-protocol/proof": "^4.14.2",
     "buffer": "^6.0.3",
     "html5-qrcode": "^2.3.8",
     "ox": "^0.8.9",

@@ -2,12 +2,13 @@
  * Contract interaction service for Witness Protocol
  * Uses the smart account client for gasless transactions
  */
-import { getContract, encodeFunctionData } from 'viem';
+import { getContract, encodeFunctionData, parseAbiItem } from 'viem';
 import { getPublicClient, getSmartAccountClient } from './smartAccount.js';
 import WitnessRegistryABI from './abi/WitnessRegistry.json';
 
-// Contract address from environment
+// Contract addresses from environment
 const REGISTRY_ADDRESS = import.meta.env.VITE_WITNESS_REGISTRY_ADDRESS;
+const SEMAPHORE_ADDRESS = import.meta.env.VITE_SEMAPHORE_ADDRESS;
 
 if (!REGISTRY_ADDRESS) {
   console.warn('[contract] VITE_WITNESS_REGISTRY_ADDRESS not set');
@@ -104,6 +105,76 @@ export async function getGroupContent(groupId) {
   return contract.read.getGroupContent([groupId]);
 }
 
+/**
+ * Get attestation count for content
+ * @param {string} contentId - Content ID (bytes32 hex)
+ * @returns {Promise<number>} Attestation count
+ */
+export async function getAttestationCount(contentId) {
+  const contract = getRegistryContract();
+  const count = await contract.read.attestationCount([contentId]);
+  return Number(count);
+}
+
+/**
+ * Get Semaphore group ID for a Witness group
+ * @param {string} groupId - Witness group ID (bytes32 hex)
+ * @returns {Promise<bigint>} Semaphore group ID
+ */
+export async function getSemaphoreGroupId(groupId) {
+  const contract = getRegistryContract();
+  return contract.read.semaphoreGroupId([groupId]);
+}
+
+/**
+ * Check if a nullifier has been used
+ * @param {bigint} nullifier - The nullifier to check
+ * @returns {Promise<boolean>} Whether nullifier is used
+ */
+export async function isNullifierUsed(nullifier) {
+  const contract = getRegistryContract();
+  return contract.read.nullifierUsed([nullifier]);
+}
+
+// Starting block for log queries - Base Sepolia recent history
+// Using a block from ~2 weeks ago to avoid expensive full-chain queries
+const LOG_START_BLOCK = 35000000n;
+
+/**
+ * Fetch all identity commitments for a Semaphore group
+ * Queries MemberAdded events from the Semaphore contract
+ * @param {bigint|number} semaphoreGroupId - Semaphore group ID
+ * @returns {Promise<{commitments: bigint[], onChainRoot: bigint}>} Commitments and current merkle root
+ */
+export async function getSemaphoreGroupMembers(semaphoreGroupId) {
+  const publicClient = getPublicClient();
+
+  // MemberAdded event: event MemberAdded(uint256 indexed groupId, uint256 index, uint256 identityCommitment, uint256 merkleTreeRoot)
+  const memberAddedEvent = parseAbiItem(
+    'event MemberAdded(uint256 indexed groupId, uint256 index, uint256 identityCommitment, uint256 merkleTreeRoot)'
+  );
+
+  const logs = await publicClient.getLogs({
+    address: SEMAPHORE_ADDRESS,
+    event: memberAddedEvent,
+    args: { groupId: BigInt(semaphoreGroupId) },
+    fromBlock: LOG_START_BLOCK,
+    toBlock: 'latest',
+  });
+
+  // Sort by index to ensure correct order
+  const sorted = logs.sort((a, b) => Number(a.args.index) - Number(b.args.index));
+  const commitments = sorted.map(log => log.args.identityCommitment);
+
+  // Get the on-chain merkle root from the last event (current state)
+  const onChainRoot = sorted.length > 0 ? sorted[sorted.length - 1].args.merkleTreeRoot : null;
+
+  console.log(`[contract] Fetched ${commitments.length} members for Semaphore group ${semaphoreGroupId}`);
+  console.log(`[contract] On-chain merkle root: ${onChainRoot?.toString().slice(0, 20)}...`);
+
+  return { commitments, onChainRoot };
+}
+
 // ============================================
 // WRITE FUNCTIONS (Gasless via Smart Account)
 // ============================================
@@ -132,11 +203,12 @@ export async function register() {
 }
 
 /**
- * Create a new group
+ * Create a new group with Semaphore integration
  * @param {string} groupId - Group ID (keccak256 of group secret)
+ * @param {bigint} identityCommitment - Creator's Semaphore identity commitment
  * @returns {Promise<string>} Transaction hash
  */
-export async function createGroup(groupId) {
+export async function createGroup(groupId, identityCommitment) {
   const client = getSmartAccountClient();
   if (!client) {
     throw new Error('Smart account not initialized');
@@ -147,7 +219,7 @@ export async function createGroup(groupId) {
     data: encodeFunctionData({
       abi: WitnessRegistryABI,
       functionName: 'createGroup',
-      args: [groupId],
+      args: [groupId, identityCommitment],
     }),
   });
 
@@ -156,11 +228,12 @@ export async function createGroup(groupId) {
 }
 
 /**
- * Join an existing group
+ * Join an existing group with identity commitment
  * @param {string} groupId - Group ID to join
+ * @param {bigint} identityCommitment - Joiner's Semaphore identity commitment
  * @returns {Promise<string>} Transaction hash
  */
-export async function joinGroup(groupId) {
+export async function joinGroup(groupId, identityCommitment) {
   const client = getSmartAccountClient();
   if (!client) {
     throw new Error('Smart account not initialized');
@@ -171,7 +244,7 @@ export async function joinGroup(groupId) {
     data: encodeFunctionData({
       abi: WitnessRegistryABI,
       functionName: 'joinGroup',
-      args: [groupId],
+      args: [groupId, identityCommitment],
     }),
   });
 
@@ -203,6 +276,42 @@ export async function commitContent(contentId, merkleRoot, manifestCID, groupIds
   });
 
   console.log('[contract] Commit content tx:', hash);
+  return hash;
+}
+
+/**
+ * Submit anonymous attestation to content
+ * @param {string} contentId - Content ID to attest to
+ * @param {string} groupId - Group ID through which attesting
+ * @param {object} proof - Semaphore proof object
+ * @returns {Promise<string>} Transaction hash
+ */
+export async function attestToContent(contentId, groupId, proof) {
+  const client = getSmartAccountClient();
+  if (!client) {
+    throw new Error('Smart account not initialized');
+  }
+
+  // Format proof for contract
+  const formattedProof = {
+    merkleTreeDepth: proof.merkleTreeDepth,
+    merkleTreeRoot: proof.merkleTreeRoot,
+    nullifier: proof.nullifier,
+    message: proof.message,
+    scope: proof.scope,
+    points: proof.points,
+  };
+
+  const hash = await client.sendTransaction({
+    to: REGISTRY_ADDRESS,
+    data: encodeFunctionData({
+      abi: WitnessRegistryABI,
+      functionName: 'attestToContent',
+      args: [contentId, groupId, formattedProof],
+    }),
+  });
+
+  console.log('[contract] Attestation tx:', hash);
   return hash;
 }
 
