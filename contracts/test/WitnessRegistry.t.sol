@@ -302,6 +302,31 @@ contract WitnessRegistryTest is Test {
         registry.updateSession(TEST_SESSION_ID, keccak256("bob-root"), "QmBobManifest", 2, groupIds);
     }
 
+    function test_IsSessionInGroup_ReturnsTrue() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+
+        assertTrue(registry.isSessionInGroup(TEST_SESSION_ID, TEST_GROUP_ID));
+    }
+
+    function test_IsSessionInGroup_ReturnsFalse() public {
+        _setupForSession();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+
+        bytes32 otherGroupId = keccak256("other-group");
+        assertFalse(registry.isSessionInGroup(TEST_SESSION_ID, otherGroupId));
+    }
+
     function test_UpdateSession_RevertIfNotRegistered() public {
         bytes32[] memory groupIds = new bytes32[](1);
         groupIds[0] = TEST_GROUP_ID;

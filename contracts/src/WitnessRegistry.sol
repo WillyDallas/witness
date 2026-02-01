@@ -362,4 +362,18 @@ contract WitnessRegistry {
     function getContentGroups(bytes32 contentId) external view returns (bytes32[] memory) {
         return contentGroups[contentId];
     }
+
+    function getSessionGroups(bytes32 sessionId) external view returns (bytes32[] memory) {
+        return sessionGroups[sessionId];
+    }
+
+    function isSessionInGroup(bytes32 sessionId, bytes32 groupId) external view returns (bool) {
+        bytes32[] memory groups_ = sessionGroups[sessionId];
+        for (uint256 i = 0; i < groups_.length; i++) {
+            if (groups_[i] == groupId) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
