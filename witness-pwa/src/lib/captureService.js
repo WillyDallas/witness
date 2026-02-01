@@ -110,6 +110,11 @@ export class CaptureService {
     this.mimeType = null;
     this.startTime = null;
     this.wakeLock = null;
+
+    // Stop synchronization
+    this._pendingChunks = 0;
+    this._stopResolve = null;
+    this._recorderStopped = false;
   }
 
   /**
@@ -260,11 +265,28 @@ export class CaptureService {
 
     console.log(`[CaptureService] Chunk ${index}: ${event.data.size} bytes`);
 
+    // Track pending chunk processing
+    this._pendingChunks++;
+
     try {
       await this.onChunk(event.data, index, metadata);
     } catch (err) {
       console.error(`[CaptureService] Error processing chunk ${index}:`, err);
       this.onError(err);
+    } finally {
+      this._pendingChunks--;
+      this._checkStopComplete();
+    }
+  }
+
+  /**
+   * Check if stop is complete (recorder stopped + all chunks processed)
+   */
+  _checkStopComplete() {
+    if (this._stopResolve && this._recorderStopped && this._pendingChunks === 0) {
+      console.log('[CaptureService] All chunks processed, stop complete');
+      this._stopResolve();
+      this._stopResolve = null;
     }
   }
 
@@ -359,6 +381,8 @@ export class CaptureService {
         console.log('[CaptureService] MediaRecorder stopped');
         this._stopGPS();
         this._setState('stopped');
+        this._recorderStopped = true;
+        this._checkStopComplete();
       };
 
       // Start recording with timeslice
@@ -375,15 +399,27 @@ export class CaptureService {
 
   /**
    * Stop capturing video
-   * Triggers final chunk via ondataavailable
+   * Returns a Promise that resolves when all chunks have been processed
+   * @returns {Promise<void>}
    */
   stop() {
-    if (this.recorder && this.recorder.state !== 'inactive') {
-      this._setState('stopping');
-      this.recorder.stop();
-    }
-    // Release wake lock
-    this._releaseWakeLock();
+    return new Promise((resolve) => {
+      // Reset stop state
+      this._recorderStopped = false;
+      this._stopResolve = resolve;
+
+      if (this.recorder && this.recorder.state !== 'inactive') {
+        this._setState('stopping');
+        this.recorder.stop();
+      } else {
+        // Already stopped, resolve immediately
+        this._recorderStopped = true;
+        this._checkStopComplete();
+      }
+
+      // Release wake lock
+      this._releaseWakeLock();
+    });
   }
 
   /**

@@ -44,6 +44,49 @@ export class SessionManager {
     this._active = true;
     this._chunkIndex = 0;
     this._status = 'recording';
+
+    // Transaction queue to prevent nonce collisions
+    // ERC-4337 parallel transactions with nonceKey proved unreliable
+    // Sequential submission is slower but 100% reliable
+    this._txQueue = [];
+    this._txProcessing = false;
+  }
+
+  /**
+   * Queue a transaction to be processed sequentially
+   * Prevents AA25 nonce collisions by ensuring one tx completes before the next starts
+   * @param {Function} txFn - Async function that submits the transaction
+   * @returns {Promise<string|null>} Transaction hash or null if failed
+   */
+  async _queueTransaction(txFn) {
+    return new Promise((resolve) => {
+      this._txQueue.push({ txFn, resolve });
+      this._processQueue();
+    });
+  }
+
+  /**
+   * Process the transaction queue one at a time
+   */
+  async _processQueue() {
+    if (this._txProcessing || this._txQueue.length === 0) {
+      return;
+    }
+
+    this._txProcessing = true;
+
+    while (this._txQueue.length > 0) {
+      const { txFn, resolve } = this._txQueue.shift();
+      try {
+        const result = await txFn();
+        resolve(result);
+      } catch (error) {
+        console.error('[SessionManager] Queued tx failed:', error.message);
+        resolve(null);
+      }
+    }
+
+    this._txProcessing = false;
   }
 
   /**
@@ -103,7 +146,9 @@ export class SessionManager {
       throw new Error('Session is not active');
     }
 
-    const chunkIndex = this._chunkIndex;
+    // Atomically capture and increment index to avoid race conditions
+    // when multiple chunks are processed concurrently
+    const chunkIndex = this._chunkIndex++;
     const capturedAt = metadata.capturedAt || Date.now();
 
     console.log(`[SessionManager] Processing chunk ${chunkIndex}`);
@@ -139,28 +184,23 @@ export class SessionManager {
     // 4. Upload manifest
     const { cid: manifestCid } = await this.manifestManager.uploadManifest();
 
-    // 5. Anchor on-chain
-    let txHash = null;
-    try {
-      // Convert UUID to bytes32 format
+    // 5. Anchor on-chain (queued to prevent nonce collisions)
+    const txHash = await this._queueTransaction(async () => {
       const sessionIdBytes32 = '0x' + this.sessionId.replace(/-/g, '').padEnd(64, '0').slice(0, 64);
 
-      txHash = await updateSession(
+      const hash = await updateSession(
         sessionIdBytes32,
         '0x' + merkleRoot,
         manifestCid,
         BigInt(chunkIndex + 1),
         this.groupIds
       );
-      await waitForTransaction(txHash);
-      console.log(`[SessionManager] Chunk ${chunkIndex} anchored: ${txHash}`);
-    } catch (error) {
-      console.error(`[SessionManager] On-chain anchor failed:`, error.message);
-      // Continue even if on-chain fails - chunks are safe on IPFS
-    }
+      await waitForTransaction(hash);
+      console.log(`[SessionManager] Chunk ${chunkIndex} anchored: ${hash}`);
+      return hash;
+    });
 
-    // Update state
-    this._chunkIndex++;
+    // Update persistent state (chunkIndex already incremented at start)
     await db.sessions.update(this.sessionId, {
       chunkCount: this._chunkIndex,
       latestManifestCid: manifestCid,

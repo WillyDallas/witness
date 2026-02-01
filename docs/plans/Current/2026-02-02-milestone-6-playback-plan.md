@@ -24,6 +24,113 @@ The existing `contentDecrypt.js` handles **single-chunk** content with a single 
 
 ---
 
+## Task 0: Bridge Session Discovery for Streaming Recordings
+
+**Problem:** Streaming recordings use `updateSession()` which writes to the `sessions` on-chain mapping, but content discovery (`discoverContent()`) reads from the `content` mapping via `getUserContent()` and `getGroupContent()`. These are different data structures, so streaming recordings are invisible to the content browser.
+
+**Files:**
+- Modify: `witness-pwa/src/lib/contentDiscovery.js`
+- Reference: `witness-pwa/src/lib/contract.js` (may need new read functions)
+
+**Option A: Update Discovery to Query Sessions (Recommended for Hackathon)**
+
+Add session discovery alongside content discovery:
+
+```javascript
+// In witness-pwa/src/lib/contentDiscovery.js
+
+import { getUserSessions } from './contract.js'; // New function needed
+
+/**
+ * Discover all content the user has access to (including streaming sessions)
+ */
+export async function discoverContent(forceRefresh = false) {
+  // ... existing code ...
+
+  // 1. Get user's own content (existing)
+  const userContentIds = await getUserContent(smartAccountAddress);
+
+  // 2. Get user's streaming sessions (NEW)
+  const userSessions = await getUserSessions(smartAccountAddress);
+
+  // Convert sessions to content-like items
+  for (const session of userSessions) {
+    if (!session.manifestCID) continue;
+
+    items[session.sessionId] = {
+      contentId: session.sessionId,
+      merkleRoot: session.merkleRoot,
+      manifestCID: session.manifestCID,
+      uploader: smartAccountAddress,
+      timestamp: Number(session.updatedAt),
+      groupIds: session.groupIds,
+      manifest: null,
+      isSession: true, // Flag to identify streaming content
+    };
+  }
+
+  // ... rest of existing code ...
+}
+```
+
+**Step 1: Add contract read function for user sessions**
+
+In `witness-pwa/src/lib/contract.js`, add:
+
+```javascript
+/**
+ * Get all session IDs for a user
+ * @param {string} address - User address
+ * @returns {Promise<object[]>} Array of session data
+ */
+export async function getUserSessions(address) {
+  const contract = getRegistryContract();
+  // This requires the contract to have a getUserSessions view function
+  // or we query SessionUpdated events
+
+  // Query SessionUpdated events for this user
+  const publicClient = getPublicClient();
+  const logs = await publicClient.getLogs({
+    address: REGISTRY_ADDRESS,
+    event: parseAbiItem('event SessionUpdated(bytes32 indexed sessionId, address indexed uploader, bytes32 merkleRoot, string manifestCID, uint256 chunkCount)'),
+    args: { uploader: address },
+    fromBlock: LOG_START_BLOCK,
+    toBlock: 'latest',
+  });
+
+  // Deduplicate by sessionId (keep latest)
+  const sessions = {};
+  for (const log of logs) {
+    sessions[log.args.sessionId] = {
+      sessionId: log.args.sessionId,
+      merkleRoot: log.args.merkleRoot,
+      manifestCID: log.args.manifestCID,
+      chunkCount: Number(log.args.chunkCount),
+      updatedAt: Date.now(), // Would need block timestamp for accuracy
+    };
+  }
+
+  return Object.values(sessions);
+}
+```
+
+**Step 2: Test session discovery**
+
+1. Record a streaming session
+2. Open Evidence browser
+3. Verify the session appears in the list
+
+**Step 3: Commit**
+
+```bash
+git add witness-pwa/src/lib/contentDiscovery.js witness-pwa/src/lib/contract.js
+git commit -m "feat: add session discovery for streaming recordings"
+```
+
+**Note:** This approach queries events which may be slow for many recordings. Post-hackathon, consider adding a `getUserSessions()` view function to the contract that returns session IDs directly.
+
+---
+
 ## Task 1: Add HKDF Chunk Key Derivation
 
 **Files:**
@@ -1090,11 +1197,12 @@ This is noted as out of scope per the planning context.
 ## Success Criteria
 
 From Milestone 6 definition:
-- [x] Update content detail for chunked content (shows chunk count, duration, status)
-- [x] Download → decrypt → concatenate → play flow
+- [ ] Bridge session discovery (streaming recordings visible in Evidence browser)
+- [ ] Update content detail for chunked content (shows chunk count, duration, status)
+- [ ] Download → decrypt → concatenate → play flow
 - [ ] **Test**: Record on Device A, play on Device B
 
-The test is the final validation that completes this milestone.
+The session discovery bridge (Task 0) is a prerequisite - without it, streaming recordings won't appear in the content list.
 
 ---
 
@@ -1102,6 +1210,8 @@ The test is the final validation that completes this milestone.
 
 | File | Action | Description |
 |------|--------|-------------|
+| `witness-pwa/src/lib/contentDiscovery.js` | Modify | Add session discovery for streaming recordings |
+| `witness-pwa/src/lib/contract.js` | Modify | Add getUserSessions() for session event queries |
 | `witness-pwa/src/lib/chunkCrypto.js` | Create | HKDF chunk key derivation |
 | `witness-pwa/src/lib/chunkedContentDecrypt.js` | Create | Multi-chunk download/decrypt service |
 | `witness-pwa/src/lib/encryption.js` | Modify | Add extractable session key unwrap |

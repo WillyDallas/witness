@@ -184,12 +184,14 @@ async function stopRecording() {
         chunkPollInterval = null;
     }
 
-    // Stop capture
+    // Stop capture and wait for final chunk to be processed
     if (captureService) {
-        captureService.stop();
+        console.log('[RecordingScreen] Waiting for final chunk...');
+        await captureService.stop();
+        console.log('[RecordingScreen] All chunks processed');
     }
 
-    // Get final chunk count before ending session
+    // Get final chunk count after all chunks are processed
     const finalChunkCount = sessionManager ? sessionManager.getChunkCount() : 0;
 
     // End session
