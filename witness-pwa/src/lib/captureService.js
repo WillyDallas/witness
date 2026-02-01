@@ -44,6 +44,31 @@ function getSupportedMimeType() {
 }
 
 /**
+ * Detect iOS Safari
+ * @returns {boolean}
+ */
+function isIOSSafari() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isWebkit = /WebKit/.test(ua);
+  const isNotCriOS = !/CriOS/.test(ua);  // Not Chrome on iOS
+  return isIOS && isWebkit && isNotCriOS;
+}
+
+/**
+ * Get platform info for debugging
+ * @returns {Object}
+ */
+function getPlatformInfo() {
+  return {
+    isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+    isIOSSafari: isIOSSafari(),
+    isAndroid: /Android/.test(navigator.userAgent),
+    userAgent: navigator.userAgent
+  };
+}
+
+/**
  * CaptureService - Real-time video capture with chunked output
  */
 export class CaptureService {
@@ -292,6 +317,10 @@ export class CaptureService {
     this.currentLocation = null;
     this.startTime = Date.now();
 
+    // Log platform info for debugging
+    const platform = getPlatformInfo();
+    console.log('[CaptureService] Platform:', platform);
+
     try {
       // Initialize stream if not already done
       if (!this.stream) {
@@ -447,4 +476,4 @@ export class CaptureService {
   }
 }
 
-export { getSupportedMimeType };
+export { getSupportedMimeType, isIOSSafari, getPlatformInfo };
