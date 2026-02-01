@@ -22,6 +22,9 @@ import { initRecovery } from './lib/streaming/RecoveryService.js';
 import { isReady, subscribeToAuth, clearAuthState, getAuthState } from './lib/authState.js';
 import { logout } from './lib/privy.js';
 import { createRegistrationStatus } from './components/RegistrationStatus.js';
+import { requestGPSPermission } from './lib/permissions.js';
+import { hasDefaultGroups, getDefaultGroupIds } from './lib/settingsStorage.js';
+import { showSettingsModal } from './ui/settingsModal.js';
 
 // DOM Elements
 const preview = document.getElementById('preview');
@@ -223,15 +226,20 @@ async function initCamera() {
     try {
         updateStatus('Requesting camera access...');
 
-        // Request camera with preferred settings
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'environment', // Prefer back camera
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            },
-            audio: true
-        });
+        // Request camera/mic AND GPS in parallel (GPS is optional/non-blocking)
+        const [stream] = await Promise.all([
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment', // Prefer back camera
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                },
+                audio: true
+            }),
+            requestGPSPermission()  // Non-blocking - resolves to true/false
+        ]);
+
+        mediaStream = stream;
 
         // Connect stream to video preview
         preview.srcObject = mediaStream;
@@ -385,23 +393,27 @@ function downloadBlob(blob, filename) {
 // Event Listeners
 // ============================================
 
-// New simplified record button - opens group selection flow
+// Record button - uses persistent default groups for instant recording
 function handleRecordButtonClick() {
     if (recordBtn.disabled) return;
 
-    // Show group selection modal
-    showRecordingGroupSelect((selectedGroupIds) => {
-        // User selected groups and clicked Start
-        startRecordingScreen(selectedGroupIds, {
-            onComplete: (result) => {
-                if (result.action === 'view') {
-                    // Navigate to content detail
-                    showContentBrowser(result.sessionId);
-                }
-                // Re-initialize camera for main screen
-                initCamera();
+    // Check if user has default groups configured
+    if (!hasDefaultGroups()) {
+        // No defaults - prompt to configure in Settings
+        showSettingsModal();
+        return;
+    }
+
+    // Start recording immediately with default groups
+    startRecordingScreen(getDefaultGroupIds(), {
+        onComplete: (result) => {
+            if (result.action === 'view') {
+                // Navigate to content detail
+                showContentBrowser(result.sessionId);
             }
-        });
+            // Re-initialize camera for main screen
+            initCamera();
+        }
     });
 }
 
@@ -486,6 +498,15 @@ encryptionTestBtn.addEventListener('click', () => {
     closeDrawer();
     showEncryptionTest();
 });
+
+// Settings button handler
+const settingsBtn = document.getElementById('settings-btn');
+if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+        closeDrawer();
+        showSettingsModal();
+    });
+}
 
 // Logout button handler
 logoutBtn.addEventListener('click', async () => {

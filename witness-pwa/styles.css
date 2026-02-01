@@ -2251,3 +2251,45 @@ html, body {
 .recording-group-modal .modal-footer {
     margin-top: 1.5rem;
 }
+
+/* ============================================
+   Settings Modal
+============================================ */
+
+.settings-modal {
+    max-width: 400px;
+}
+
+.settings-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.settings-modal .modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-light);
+}
+
+.settings-section {
+    margin-bottom: 1.5rem;
+}
+
+.settings-section h3 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem;
+    color: var(--text-light);
+}
+
+.settings-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+    line-height: 1.4;
+}
+
+.settings-modal .modal-footer {
+    margin-top: 1.5rem;
+}
