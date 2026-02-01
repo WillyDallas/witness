@@ -280,6 +280,28 @@ contract WitnessRegistryTest is Test {
         registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
     }
 
+    function test_UpdateSession_RevertIfNotCreator() public {
+        _setupForSession();
+
+        // Bob registers and joins the group
+        vm.prank(bob);
+        registry.register();
+        vm.prank(bob);
+        registry.joinGroup(TEST_GROUP_ID, BOB_COMMITMENT);
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        // Alice creates session
+        vm.prank(alice);
+        registry.updateSession(TEST_SESSION_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, 1, groupIds);
+
+        // Bob tries to update Alice's session
+        vm.prank(bob);
+        vm.expectRevert(WitnessRegistry.NotSessionCreator.selector);
+        registry.updateSession(TEST_SESSION_ID, keccak256("bob-root"), "QmBobManifest", 2, groupIds);
+    }
+
     // ============================================
     // CONTENT COMMITMENT TESTS
     // ============================================
