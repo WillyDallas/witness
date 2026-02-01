@@ -32,6 +32,19 @@
 
 ---
 
+## Terminology Note
+
+This document uses `sessionId` to represent a recording session. This maps to `contentId` in the broader implementation plan—they are the same identifier. A "session" becomes "content" when recording completes, but the ID remains constant throughout.
+
+| Term | Meaning |
+|------|---------|
+| `sessionId` / `contentId` | Unique identifier for a recording (UUID, generated at recording start) |
+| `groupId` | `keccak256(groupSecret)` - identifies a sharing group |
+| `sessionKey` | Random 32-byte key generated per recording for encryption |
+| `groupSecret` | 32-byte secret shared among group members for key unwrapping |
+
+---
+
 ## Core Design Decisions
 
 ### 1. Capture Layer
@@ -337,7 +350,8 @@ function updateSession(
     bytes32 sessionId,
     bytes32 merkleRoot,
     string calldata manifestCid,
-    uint256 chunkCount
+    uint256 chunkCount,
+    bytes32[] calldata groupIds    // Which groups have access (for attestation verification)
 ) external;
 
 // Events for trusted contacts to watch
@@ -347,6 +361,7 @@ event SessionUpdated(
     bytes32 merkleRoot,
     string manifestCid,
     uint256 chunkCount,
+    bytes32[] groupIds,
     uint256 timestamp
 );
 
@@ -357,7 +372,65 @@ function verifyChunk(
     bytes32[] calldata proof,
     uint256 leafIndex
 ) external view returns (bool);
+
+// Check if content is shared with a group (used by attestation verification)
+function isContentInGroup(bytes32 sessionId, bytes32 groupId) external view returns (bool);
 ```
+
+**Why groupIds on-chain?**
+
+Groups are stored on-chain (not just in the manifest) because:
+1. **Attestation verification**: The contract must verify "this content is shared with group X" before accepting a Semaphore ZK proof for attestation
+2. **Indexing**: Enables `groupContentIndex` mapping for discovery
+3. **Semaphore integration**: Links content to the parallel Semaphore groups for anonymous attestations
+
+The manifest's `accessList` still holds the **wrapped keys** (off-chain), while the contract holds the **group membership** (on-chain).
+
+---
+
+### 8. Semaphore Integration (Anonymous Attestations)
+
+This design operates alongside the Semaphore-based attestation system defined in [witness-protocol-implementation-plan.md](../../Wallet-creation-paymaster-zkdid/witness-protocol-implementation-plan.md).
+
+**How they connect:**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    TWO-LAYER ARCHITECTURE                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  LAYER 1: DATA CHUNKING & TRANSPORT (this document)                 │
+│  ─────────────────────────────────────────────────────────────────  │
+│  • Capture → Encrypt → Upload → Anchor                              │
+│  • Merkle root proves content integrity                             │
+│  • groupIds on-chain enable access control verification             │
+│  • accessList in manifest holds wrapped keys for decryption         │
+│                                                                     │
+│  LAYER 2: ANONYMOUS ATTESTATIONS (Semaphore)                        │
+│  ─────────────────────────────────────────────────────────────────  │
+│  • Each witness group has a parallel Semaphore group                │
+│  • Members can attest: "I verified this content"                    │
+│  • ZK proof reveals nothing about WHO attested                      │
+│  • Contract checks isContentInGroup() before accepting attestation  │
+│                                                                     │
+│  PUBLIC: Attestation COUNT per content                              │
+│  PRIVATE: Which members attested                                    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Attestation flow (after content upload):**
+
+1. Group member downloads content via this transport layer
+2. Member verifies Merkle proof (content matches on-chain root)
+3. Member generates Semaphore ZK proof with `scope = sessionId`
+4. Contract verifies:
+   - `isContentInGroup(sessionId, groupId)` → true
+   - Semaphore proof is valid
+   - Nullifier not already used
+5. `attestationCount[sessionId]++`
+
+**Key point**: The `groupIds` stored on-chain by `updateSession()` enable the contract to verify attestation eligibility without requiring the attestor to reveal their identity.
 
 ---
 
@@ -396,6 +469,15 @@ How a trusted contact verifies evidence:
       │
       ▼
 6. Video is verified authentic ✓
+      │
+      ▼
+7. (Optional) Attest to evidence
+   │
+   ├─► Generate Semaphore ZK proof (scope = sessionId)
+   │
+   ├─► Submit attestToContent(sessionId, groupId, proof)
+   │
+   └─► Attestation count increments anonymously
 ```
 
 ---
@@ -459,7 +541,9 @@ These are post-hackathon considerations.
 
 ## References
 
+- [witness-protocol-implementation-plan.md](../../Wallet-creation-paymaster-zkdid/witness-protocol-implementation-plan.md) - **Primary implementation plan** (takes precedence)
 - [chunking-research.md](./chunking-research.md) - MediaRecorder behavior research
 - [Tamper-Evident-research.md](./Tamper-Evident-research.md) - Provenance standards
 - [witness-provenance-implementation.md](./witness-provenance-implementation.md) - PWA vs Native tradeoffs
 - [witness-protocol-architecture-v3.md](../planning/witness-protocol-architecture-v3.md) - Overall architecture
+- [primus-integration-reference.md](./primus-integration-reference.md) - zkTLS for verified timestamps (future)
