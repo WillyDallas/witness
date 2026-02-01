@@ -27,6 +27,7 @@
     "@semaphore-protocol/identity": "^4.14.2",
     "@semaphore-protocol/proof": "^4.14.2",
     "buffer": "^6.0.3",
+    "dexie": "^4.3.0",
     "html5-qrcode": "^2.3.8",
     "ox": "^0.8.9",
     "permissionless": "^0.2.57",
