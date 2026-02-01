@@ -237,6 +237,68 @@ contract WitnessRegistry {
     }
 
     // ============================================
+    // SESSION MANAGEMENT (Streaming Video)
+    // ============================================
+
+    /**
+     * @notice Create or update a streaming session
+     * @param sessionId Unique identifier for the session
+     * @param merkleRoot Current merkle root of all chunks
+     * @param manifestCid IPFS CID of the current manifest
+     * @param chunkCount Number of chunks uploaded so far
+     * @param groupIds Groups that can access this session
+     */
+    function updateSession(
+        bytes32 sessionId,
+        bytes32 merkleRoot,
+        string calldata manifestCid,
+        uint256 chunkCount,
+        bytes32[] calldata groupIds
+    ) external {
+        if (!registered[msg.sender]) revert NotRegistered();
+        if (bytes(manifestCid).length == 0) revert EmptyManifestCID();
+        if (groupIds.length == 0) revert NoGroupsSpecified();
+        if (chunkCount == 0) revert ZeroChunkCount();
+
+        // Validate caller is member of all groups
+        for (uint256 i = 0; i < groupIds.length; i++) {
+            if (!groupMembers[groupIds[i]][msg.sender]) revert NotMember();
+        }
+
+        Session storage session = sessions[sessionId];
+
+        if (session.createdAt == 0) {
+            // New session
+            session.creator = msg.sender;
+            session.createdAt = uint64(block.timestamp);
+
+            // Store group associations (only on creation)
+            for (uint256 i = 0; i < groupIds.length; i++) {
+                sessionGroups[sessionId].push(groupIds[i]);
+            }
+        } else {
+            // Existing session - only creator can update
+            if (session.creator != msg.sender) revert NotSessionCreator();
+        }
+
+        // Update mutable fields
+        session.merkleRoot = merkleRoot;
+        session.manifestCid = manifestCid;
+        session.chunkCount = chunkCount;
+        session.updatedAt = uint64(block.timestamp);
+
+        emit SessionUpdated(
+            sessionId,
+            msg.sender,
+            merkleRoot,
+            manifestCid,
+            chunkCount,
+            groupIds,
+            block.timestamp
+        );
+    }
+
+    // ============================================
     // ATTESTATIONS (Anonymous via Semaphore)
     // ============================================
 
