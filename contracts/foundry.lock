@@ -1,0 +1,8 @@
+{
+  "lib/semaphore": {
+    "tag": {
+      "name": "v4.14.2",
+      "rev": "1ba284402acaa353ce735c0b98e1ff20de665932"
+    }
+  }
+}

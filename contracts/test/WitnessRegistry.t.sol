@@ -3,15 +3,23 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {WitnessRegistry} from "../src/WitnessRegistry.sol";
+import {MockSemaphore} from "./mocks/MockSemaphore.sol";
+import "@semaphore-protocol/contracts/interfaces/ISemaphore.sol";
 
 contract WitnessRegistryTest is Test {
     WitnessRegistry public registry;
+    MockSemaphore public mockSemaphore;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
 
+    // Test identity commitments (mock values)
+    uint256 public constant ALICE_COMMITMENT = 12345678901234567890;
+    uint256 public constant BOB_COMMITMENT = 98765432109876543210;
+
     function setUp() public {
-        registry = new WitnessRegistry();
+        mockSemaphore = new MockSemaphore();
+        registry = new WitnessRegistry(address(mockSemaphore));
     }
 
     // ============================================
@@ -57,13 +65,16 @@ contract WitnessRegistryTest is Test {
         registry.register();
 
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         (address creator, uint64 createdAt, bool active) = registry.groups(TEST_GROUP_ID);
         assertEq(creator, alice);
         assertGt(createdAt, 0);
         assertTrue(active);
         assertTrue(registry.groupMembers(TEST_GROUP_ID, alice));
+
+        // Verify Semaphore group was created
+        assertGt(registry.semaphoreGroupId(TEST_GROUP_ID), 0);
     }
 
     function test_CreateGroup_EmitsEvent() public {
@@ -72,14 +83,14 @@ contract WitnessRegistryTest is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, false, true);
-        emit WitnessRegistry.GroupCreated(TEST_GROUP_ID, alice, uint64(block.timestamp));
-        registry.createGroup(TEST_GROUP_ID);
+        emit WitnessRegistry.GroupCreated(TEST_GROUP_ID, alice, 1, uint64(block.timestamp));
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
     }
 
     function test_CreateGroup_RevertIfNotRegistered() public {
         vm.prank(alice);
         vm.expectRevert(WitnessRegistry.NotRegistered.selector);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
     }
 
     function test_CreateGroup_RevertIfGroupExists() public {
@@ -87,14 +98,14 @@ contract WitnessRegistryTest is Test {
         registry.register();
 
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         vm.prank(bob);
         registry.register();
 
         vm.prank(bob);
         vm.expectRevert(WitnessRegistry.GroupAlreadyExists.selector);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, BOB_COMMITMENT);
     }
 
     // ============================================
@@ -106,13 +117,13 @@ contract WitnessRegistryTest is Test {
         vm.prank(alice);
         registry.register();
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         // Bob joins
         vm.prank(bob);
         registry.register();
         vm.prank(bob);
-        registry.joinGroup(TEST_GROUP_ID);
+        registry.joinGroup(TEST_GROUP_ID, BOB_COMMITMENT);
 
         assertTrue(registry.groupMembers(TEST_GROUP_ID, bob));
     }
@@ -121,26 +132,26 @@ contract WitnessRegistryTest is Test {
         vm.prank(alice);
         registry.register();
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         vm.prank(bob);
         registry.register();
 
         vm.prank(bob);
         vm.expectEmit(true, true, false, true);
-        emit WitnessRegistry.GroupJoined(TEST_GROUP_ID, bob, uint64(block.timestamp));
-        registry.joinGroup(TEST_GROUP_ID);
+        emit WitnessRegistry.GroupJoined(TEST_GROUP_ID, bob, BOB_COMMITMENT, uint64(block.timestamp));
+        registry.joinGroup(TEST_GROUP_ID, BOB_COMMITMENT);
     }
 
     function test_JoinGroup_RevertIfNotRegistered() public {
         vm.prank(alice);
         registry.register();
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         vm.prank(bob);
         vm.expectRevert(WitnessRegistry.NotRegistered.selector);
-        registry.joinGroup(TEST_GROUP_ID);
+        registry.joinGroup(TEST_GROUP_ID, BOB_COMMITMENT);
     }
 
     function test_JoinGroup_RevertIfGroupDoesNotExist() public {
@@ -149,19 +160,19 @@ contract WitnessRegistryTest is Test {
 
         vm.prank(bob);
         vm.expectRevert(WitnessRegistry.GroupDoesNotExist.selector);
-        registry.joinGroup(TEST_GROUP_ID);
+        registry.joinGroup(TEST_GROUP_ID, BOB_COMMITMENT);
     }
 
     function test_JoinGroup_RevertIfAlreadyMember() public {
         vm.prank(alice);
         registry.register();
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         // Alice tries to join again (already member as creator)
         vm.prank(alice);
         vm.expectRevert(WitnessRegistry.AlreadyMember.selector);
-        registry.joinGroup(TEST_GROUP_ID);
+        registry.joinGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
     }
 
     // ============================================
@@ -176,12 +187,12 @@ contract WitnessRegistryTest is Test {
         vm.prank(alice);
         registry.register();
         vm.prank(alice);
-        registry.createGroup(TEST_GROUP_ID);
+        registry.createGroup(TEST_GROUP_ID, ALICE_COMMITMENT);
 
         vm.prank(bob);
         registry.register();
         vm.prank(bob);
-        registry.joinGroup(TEST_GROUP_ID);
+        registry.joinGroup(TEST_GROUP_ID, BOB_COMMITMENT);
     }
 
     function test_CommitContent_Success() public {
@@ -296,5 +307,108 @@ contract WitnessRegistryTest is Test {
         bytes32[] memory groupContentList = registry.getGroupContent(TEST_GROUP_ID);
         assertEq(groupContentList.length, 1);
         assertEq(groupContentList[0], TEST_CONTENT_ID);
+    }
+
+    // ============================================
+    // ATTESTATION TESTS
+    // ============================================
+
+    function _setupContentForAttestation() internal {
+        _setupGroupWithMembers();
+
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+
+        vm.prank(alice);
+        registry.commitContent(TEST_CONTENT_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, groupIds);
+    }
+
+    function _createMockProof(uint256 nullifier) internal pure returns (ISemaphore.SemaphoreProof memory) {
+        uint256[8] memory points;
+        return ISemaphore.SemaphoreProof({
+            merkleTreeDepth: 20,
+            merkleTreeRoot: 123456789,
+            nullifier: nullifier,
+            message: uint256(TEST_CONTENT_ID),
+            scope: uint256(TEST_CONTENT_ID),
+            points: points
+        });
+    }
+
+    function test_AttestToContent_Success() public {
+        _setupContentForAttestation();
+
+        uint256 semGroupId = registry.semaphoreGroupId(TEST_GROUP_ID);
+        assertGt(semGroupId, 0);
+
+        ISemaphore.SemaphoreProof memory proof = _createMockProof(111111);
+
+        vm.prank(bob);
+        registry.attestToContent(TEST_CONTENT_ID, TEST_GROUP_ID, proof);
+
+        assertEq(registry.getAttestationCount(TEST_CONTENT_ID), 1);
+        assertTrue(registry.nullifierUsed(111111));
+    }
+
+    function test_AttestToContent_EmitsEvent() public {
+        _setupContentForAttestation();
+
+        ISemaphore.SemaphoreProof memory proof = _createMockProof(222222);
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, true);
+        emit WitnessRegistry.AttestationCreated(TEST_CONTENT_ID, TEST_GROUP_ID, 1, uint64(block.timestamp));
+        registry.attestToContent(TEST_CONTENT_ID, TEST_GROUP_ID, proof);
+    }
+
+    function test_AttestToContent_MultipleAttestations() public {
+        _setupContentForAttestation();
+
+        ISemaphore.SemaphoreProof memory proof1 = _createMockProof(333333);
+        ISemaphore.SemaphoreProof memory proof2 = _createMockProof(444444);
+
+        vm.prank(alice);
+        registry.attestToContent(TEST_CONTENT_ID, TEST_GROUP_ID, proof1);
+
+        vm.prank(bob);
+        registry.attestToContent(TEST_CONTENT_ID, TEST_GROUP_ID, proof2);
+
+        assertEq(registry.getAttestationCount(TEST_CONTENT_ID), 2);
+    }
+
+    function test_AttestToContent_RevertIfContentNotInGroup() public {
+        _setupGroupWithMembers();
+
+        // Create a different group
+        bytes32 otherGroupId = keccak256("other-group");
+        vm.prank(alice);
+        registry.createGroup(otherGroupId, ALICE_COMMITMENT);
+
+        // Commit content to original group only
+        bytes32[] memory groupIds = new bytes32[](1);
+        groupIds[0] = TEST_GROUP_ID;
+        vm.prank(alice);
+        registry.commitContent(TEST_CONTENT_ID, TEST_MERKLE_ROOT, TEST_MANIFEST_CID, groupIds);
+
+        // Try to attest through the other group
+        ISemaphore.SemaphoreProof memory proof = _createMockProof(555555);
+
+        vm.prank(alice);
+        vm.expectRevert(WitnessRegistry.ContentNotInGroup.selector);
+        registry.attestToContent(TEST_CONTENT_ID, otherGroupId, proof);
+    }
+
+    function test_AttestToContent_RevertIfNullifierUsed() public {
+        _setupContentForAttestation();
+
+        ISemaphore.SemaphoreProof memory proof = _createMockProof(666666);
+
+        vm.prank(alice);
+        registry.attestToContent(TEST_CONTENT_ID, TEST_GROUP_ID, proof);
+
+        // Try to attest again with same nullifier
+        vm.prank(bob);
+        vm.expectRevert(WitnessRegistry.NullifierAlreadyUsed.selector);
+        registry.attestToContent(TEST_CONTENT_ID, TEST_GROUP_ID, proof);
     }
 }

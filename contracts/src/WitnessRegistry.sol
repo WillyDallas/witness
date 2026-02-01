@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@semaphore-protocol/contracts/interfaces/ISemaphore.sol";
+
 /**
  * @title WitnessRegistry
- * @notice On-chain registry for Witness Protocol users, groups, and content commitments
- * @dev Minimal on-chain footprint - heavy data lives on IPFS
+ * @notice On-chain registry for Witness Protocol with anonymous attestations
+ * @dev Integrates Semaphore for ZK group membership proofs
  */
 contract WitnessRegistry {
     // ============================================
@@ -28,6 +30,9 @@ contract WitnessRegistry {
     // STATE VARIABLES
     // ============================================
 
+    // Semaphore contract reference
+    ISemaphore public semaphore;
+
     // User registration
     mapping(address => bool) public registered;
     mapping(address => uint64) public registeredAt;
@@ -37,24 +42,37 @@ contract WitnessRegistry {
     mapping(bytes32 => mapping(address => bool)) public groupMembers;
     mapping(bytes32 => address[]) internal _groupMemberList;
 
+    // Semaphore group mapping (witnessGroupId => semaphoreGroupId)
+    mapping(bytes32 => uint256) public semaphoreGroupId;
+
     // Content commitments
     mapping(bytes32 => ContentCommitment) public content;
-    mapping(bytes32 => bytes32[]) public contentGroups; // contentId => groupIds
-    mapping(bytes32 => bytes32[]) public groupContent; // groupId => contentIds
-    mapping(address => bytes32[]) public userContent; // user => contentIds
+    mapping(bytes32 => bytes32[]) public contentGroups;
+    mapping(bytes32 => bytes32[]) public groupContent;
+    mapping(address => bytes32[]) public userContent;
+
+    // Attestations
+    mapping(bytes32 => uint256) public attestationCount; // contentId => count
+    mapping(uint256 => bool) public nullifierUsed; // nullifier => used
 
     // ============================================
     // EVENTS
     // ============================================
 
     event UserRegistered(address indexed user, uint64 timestamp);
-    event GroupCreated(bytes32 indexed groupId, address indexed creator, uint64 timestamp);
-    event GroupJoined(bytes32 indexed groupId, address indexed member, uint64 timestamp);
+    event GroupCreated(bytes32 indexed groupId, address indexed creator, uint256 semaphoreGroupId, uint64 timestamp);
+    event GroupJoined(bytes32 indexed groupId, address indexed member, uint256 identityCommitment, uint64 timestamp);
     event ContentCommitted(
         bytes32 indexed contentId,
         address indexed uploader,
         bytes32 merkleRoot,
         string manifestCID,
+        uint64 timestamp
+    );
+    event AttestationCreated(
+        bytes32 indexed contentId,
+        bytes32 indexed groupId,
+        uint256 newCount,
         uint64 timestamp
     );
 
@@ -71,15 +89,26 @@ contract WitnessRegistry {
     error ContentAlreadyExists();
     error EmptyManifestCID();
     error NoGroupsSpecified();
+    error ContentNotInGroup();
+    error NullifierAlreadyUsed();
+    error InvalidProof();
+
+    // ============================================
+    // CONSTRUCTOR
+    // ============================================
+
+    /**
+     * @notice Initialize with Semaphore contract address
+     * @param _semaphore Address of deployed Semaphore contract
+     */
+    constructor(address _semaphore) {
+        semaphore = ISemaphore(_semaphore);
+    }
 
     // ============================================
     // USER REGISTRATION
     // ============================================
 
-    /**
-     * @notice Register the caller as a Witness Protocol user
-     * @dev Emits UserRegistered event
-     */
     function register() external {
         if (registered[msg.sender]) revert AlreadyRegistered();
 
@@ -94,33 +123,41 @@ contract WitnessRegistry {
     // ============================================
 
     /**
-     * @notice Create a new group
+     * @notice Create a new group with parallel Semaphore group
      * @param groupId The keccak256 hash of the group secret
-     * @dev Caller must be registered. Creator is automatically added as member.
+     * @param identityCommitment Creator's Semaphore identity commitment
      */
-    function createGroup(bytes32 groupId) external {
+    function createGroup(bytes32 groupId, uint256 identityCommitment) external {
         if (!registered[msg.sender]) revert NotRegistered();
         if (groups[groupId].createdAt != 0) revert GroupAlreadyExists();
 
+        // Create Witness group
         groups[groupId] = Group({
             creator: msg.sender,
             createdAt: uint64(block.timestamp),
             active: true
         });
 
-        // Creator is automatically a member
         groupMembers[groupId][msg.sender] = true;
         _groupMemberList[groupId].push(msg.sender);
 
-        emit GroupCreated(groupId, msg.sender, uint64(block.timestamp));
+        // Create parallel Semaphore group (WitnessRegistry becomes admin)
+        // Capture returned group ID - Semaphore assigns IDs sequentially
+        uint256 semGroupId = semaphore.createGroup();
+        semaphoreGroupId[groupId] = semGroupId;
+
+        // Add creator to Semaphore group
+        semaphore.addMember(semGroupId, identityCommitment);
+
+        emit GroupCreated(groupId, msg.sender, semGroupId, uint64(block.timestamp));
     }
 
     /**
-     * @notice Join an existing group
+     * @notice Join an existing group with identity commitment
      * @param groupId The group to join
-     * @dev Caller must be registered and group must exist
+     * @param identityCommitment Joiner's Semaphore identity commitment
      */
-    function joinGroup(bytes32 groupId) external {
+    function joinGroup(bytes32 groupId, uint256 identityCommitment) external {
         if (!registered[msg.sender]) revert NotRegistered();
         if (groups[groupId].createdAt == 0) revert GroupDoesNotExist();
         if (groupMembers[groupId][msg.sender]) revert AlreadyMember();
@@ -128,14 +165,13 @@ contract WitnessRegistry {
         groupMembers[groupId][msg.sender] = true;
         _groupMemberList[groupId].push(msg.sender);
 
-        emit GroupJoined(groupId, msg.sender, uint64(block.timestamp));
+        // Add to Semaphore group
+        uint256 semGroupId = semaphoreGroupId[groupId];
+        semaphore.addMember(semGroupId, identityCommitment);
+
+        emit GroupJoined(groupId, msg.sender, identityCommitment, uint64(block.timestamp));
     }
 
-    /**
-     * @notice Get the number of members in a group
-     * @param groupId The group to query
-     * @return The number of members
-     */
     function getGroupMemberCount(bytes32 groupId) external view returns (uint256) {
         return _groupMemberList[groupId].length;
     }
@@ -144,14 +180,6 @@ contract WitnessRegistry {
     // CONTENT COMMITMENT
     // ============================================
 
-    /**
-     * @notice Commit content to the registry
-     * @param contentId Unique identifier for the content
-     * @param merkleRoot Merkle root of content chunks
-     * @param manifestCID IPFS CID of the content manifest
-     * @param groupIds Groups to share this content with
-     * @dev Caller must be registered and member of all specified groups
-     */
     function commitContent(
         bytes32 contentId,
         bytes32 merkleRoot,
@@ -163,12 +191,10 @@ contract WitnessRegistry {
         if (bytes(manifestCID).length == 0) revert EmptyManifestCID();
         if (groupIds.length == 0) revert NoGroupsSpecified();
 
-        // Verify caller is member of all groups
         for (uint256 i = 0; i < groupIds.length; i++) {
             if (!groupMembers[groupIds[i]][msg.sender]) revert NotMember();
         }
 
-        // Store content commitment
         content[contentId] = ContentCommitment({
             merkleRoot: merkleRoot,
             manifestCID: manifestCID,
@@ -176,45 +202,77 @@ contract WitnessRegistry {
             timestamp: uint64(block.timestamp)
         });
 
-        // Index content under each group
         for (uint256 i = 0; i < groupIds.length; i++) {
             contentGroups[contentId].push(groupIds[i]);
             groupContent[groupIds[i]].push(contentId);
         }
 
-        // Index under user
         userContent[msg.sender].push(contentId);
 
         emit ContentCommitted(contentId, msg.sender, merkleRoot, manifestCID, uint64(block.timestamp));
     }
 
     // ============================================
-    // VIEW FUNCTIONS
+    // ATTESTATIONS (Anonymous via Semaphore)
     // ============================================
 
     /**
-     * @notice Get all content IDs for a user
-     * @param user The user address
-     * @return Array of content IDs
+     * @notice Attest to content anonymously using ZK proof
+     * @param contentId The content being attested to
+     * @param groupId The group through which user is attesting
+     * @param proof The Semaphore proof (includes nullifier)
      */
+    function attestToContent(
+        bytes32 contentId,
+        bytes32 groupId,
+        ISemaphore.SemaphoreProof calldata proof
+    ) external {
+        // Verify content is shared with this group
+        bool inGroup = false;
+        bytes32[] memory groups_ = contentGroups[contentId];
+        for (uint256 i = 0; i < groups_.length; i++) {
+            if (groups_[i] == groupId) {
+                inGroup = true;
+                break;
+            }
+        }
+        if (!inGroup) revert ContentNotInGroup();
+
+        // Check nullifier not used (prevents double attestation)
+        if (nullifierUsed[proof.nullifier]) revert NullifierAlreadyUsed();
+
+        // Verify ZK proof via Semaphore
+        uint256 semGroupId = semaphoreGroupId[groupId];
+        semaphore.validateProof(semGroupId, proof);
+
+        // Record attestation
+        nullifierUsed[proof.nullifier] = true;
+        attestationCount[contentId]++;
+
+        emit AttestationCreated(contentId, groupId, attestationCount[contentId], uint64(block.timestamp));
+    }
+
+    /**
+     * @notice Get attestation count for content
+     * @param contentId The content ID
+     * @return Number of attestations
+     */
+    function getAttestationCount(bytes32 contentId) external view returns (uint256) {
+        return attestationCount[contentId];
+    }
+
+    // ============================================
+    // VIEW FUNCTIONS
+    // ============================================
+
     function getUserContent(address user) external view returns (bytes32[] memory) {
         return userContent[user];
     }
 
-    /**
-     * @notice Get all content IDs for a group
-     * @param groupId The group ID
-     * @return Array of content IDs
-     */
     function getGroupContent(bytes32 groupId) external view returns (bytes32[] memory) {
         return groupContent[groupId];
     }
 
-    /**
-     * @notice Get all groups a content is shared with
-     * @param contentId The content ID
-     * @return Array of group IDs
-     */
     function getContentGroups(bytes32 contentId) external view returns (bytes32[] memory) {
         return contentGroups[contentId];
     }

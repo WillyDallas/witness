@@ -1,0 +1,3 @@
+[submodule "contracts/lib/semaphore"]
+	path = contracts/lib/semaphore
+	url = https://github.com/semaphore-protocol/semaphore
