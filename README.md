@@ -143,6 +143,8 @@ Service worker updates propagate automatically. For PWA home screen apps, users 
 - Content commitment (merkle roots + manifest CIDs)
 - Anonymous attestation verification
 
+**Deployed Address**: [`0xd68f0B67c158a1e862Fe7fAc0d58302D21220b78`](https://sepolia.basescan.org/address/0xd68f0B67c158a1e862Fe7fAc0d58302D21220b78)
+
 ### Deploy Contract
 
 From project root:
