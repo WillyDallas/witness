@@ -1,0 +1,12 @@
+{
+  "name": "witness-protocol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Witness Protocol - Privacy-preserving evidence capture",
+  "scripts": {
+    "dev": "cd witness-pwa && npm run dev",
+    "build": "cd witness-pwa && npm run build",
+    "test": "cd witness-pwa && npm run test",
+    "deploy": "./deploy.sh"
+  }
+}
