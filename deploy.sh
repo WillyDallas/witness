@@ -19,7 +19,7 @@ fi
 export $(grep -v '^#' .env | grep -v '^$' | xargs)
 
 # Step 1: Deploy contract
-echo -e "\n${YELLOW}[1/4] Deploying WitnessRegistry to Base Sepolia...${NC}"
+echo -e "\n${YELLOW}[1/5] Deploying WitnessRegistry to Base Sepolia...${NC}"
 cd contracts
 forge script script/DeployWitnessRegistry.s.sol:DeployWitnessRegistry \
     --rpc-url base-sepolia --broadcast -v
@@ -40,8 +40,8 @@ echo -e "${GREEN}Deploy block: ${NEW_BLOCK}${NC}"
 
 cd ..
 
-# Step 2: Update .env
-echo -e "\n${YELLOW}[2/4] Updating .env with new contract address...${NC}"
+# Step 2: Update .env and README
+echo -e "\n${YELLOW}[2/5] Updating .env with new contract address...${NC}"
 OLD_ADDRESS=$(grep "^VITE_WITNESS_REGISTRY_ADDRESS=" .env | cut -d'=' -f2)
 
 # Update the address and block
@@ -52,14 +52,21 @@ rm -f .env.bak
 
 echo -e "${GREEN}.env updated${NC}"
 
-# Step 3: Build PWA
-echo -e "\n${YELLOW}[3/4] Building PWA...${NC}"
+# Update README.md with new contract address
+echo -e "\n${YELLOW}[3/5] Updating README.md with new contract address...${NC}"
+sed -i.bak "s|\*\*Deployed Address\*\*: \[\`0x[a-fA-F0-9]\{40\}\`\](https://sepolia.basescan.org/address/0x[a-fA-F0-9]\{40\})|\*\*Deployed Address\*\*: [\`${NEW_ADDRESS}\`](https://sepolia.basescan.org/address/${NEW_ADDRESS})|" README.md
+rm -f README.md.bak
+
+echo -e "${GREEN}README.md updated${NC}"
+
+# Step 4: Build PWA
+echo -e "\n${YELLOW}[4/5] Building PWA...${NC}"
 cd witness-pwa
 npm run build
 cd ..
 
-# Step 4: Deploy to server
-echo -e "\n${YELLOW}[4/4] Deploying to server...${NC}"
+# Step 5: Deploy to server
+echo -e "\n${YELLOW}[5/5] Deploying to server...${NC}"
 rsync -avz witness-pwa/dist/ root@46.62.231.168:/var/www/witness/
 
 echo -e "\n${GREEN}=== Deploy Complete ===${NC}"
