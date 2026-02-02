@@ -56,23 +56,10 @@ Evidence is only as credible as the witnesses who can vouch for it. Witness Prot
 │   └── broadcast/            # Deployment artifacts
 │
 ├── docs/
-│   ├── architecture/         # System architecture documentation
-│   │   ├── README.md        # High-level overview
-│   │   ├── anonymous-attestations.md
-│   │   ├── encryption-key-derivation.md
-│   │   ├── content-storage.md
-│   │   └── cryptographic-architecture.md
-│   ├── planning/            # Vision and architecture docs
-│   │   ├── witness-protocol-architecture-v3.md
-│   │   └── plan archive/    # Historical planning docs
-│   ├── plans/
-│   │   ├── Shipped/         # Completed implementation plans (Phases 0-7)
-│   │   └── Current/         # In-progress milestone plans
-│   ├── research/            # Technology research
-│   │   ├── general/
-│   │   ├── video-storage-and-transport/
-│   │   └── Wallet-creation-paymaster-zkdid/
+│   ├── architecture/         # System architecture & design
 │   ├── front-end/           # UI/UX documentation
+│   ├── planning/            # Vision and architecture specs
+│   ├── research/            # Technology research notes
 │   └── testing/             # Test plans and results
 │
 ├── deploy.sh                # Automated deployment script
@@ -178,8 +165,7 @@ See [CLAUDE.md](./CLAUDE.md) for detailed deployment instructions.
 - **[Anonymous Attestations](docs/architecture/anonymous-attestations.md)** - ZK proof system using Semaphore
 - **[Encryption & Key Derivation](docs/architecture/encryption-key-derivation.md)** - Cryptographic design
 - **[Content Storage](docs/architecture/content-storage.md)** - IPFS + on-chain architecture
-- **[Shipped Plans](docs/plans/Shipped/)** - Completed implementation plans for Phases 0-7
-- **[Current Plans](docs/plans/Current/)** - In-progress milestone work
+- **[Technical Decisions & Limitations](docs/architecture/technical-decisions-and-limitations.md)** - Current constraints
 
 ## 🎨 How It Works
 
@@ -213,9 +199,9 @@ This is a hackathon project with rapid iteration. See [Technical Decisions & Lim
 ## 🤝 Contributing
 
 This project is in active hackathon development. If you're interested in contributing:
-- Check [Current Plans](docs/plans/Current/) for in-progress work
-- See [CLAUDE.md](./CLAUDE.md) for development guidelines
+- See [CLAUDE.md](./CLAUDE.md) for development guidelines and project context
 - Review [Architecture docs](docs/architecture/) to understand the system
+- Check the [Issues](https://github.com/WillyDallas/witness/issues) for open tasks
 
 ## 📞 Contact
 
