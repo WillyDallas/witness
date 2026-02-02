@@ -683,18 +683,66 @@ html, body {
 
 .drawer-footer {
     margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border-color);
 }
 
-.btn-logout {
-    width: 100%;
-    text-align: center;
+.drawer-footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.drawer-grid-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 12px;
+    min-height: 72px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.drawer-grid-btn:hover {
+    background: var(--bg-surface-hover, rgba(255, 255, 255, 0.1));
+}
+
+.drawer-grid-btn:active {
+    background: var(--bg-surface-hover, rgba(255, 255, 255, 0.1));
+    transform: scale(0.98);
+}
+
+.drawer-grid-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.drawer-grid-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sign Out button - subtle danger styling */
+.drawer-grid-btn--danger {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.drawer-grid-btn--danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.drawer-grid-btn--danger .drawer-grid-label {
     color: #ef4444;
-}
-
-.btn-logout:hover {
-    color: #f87171;
 }
 
 /* ==========================================

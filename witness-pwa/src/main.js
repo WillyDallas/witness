@@ -10,9 +10,7 @@ import { Buffer } from 'buffer';
 globalThis.Buffer = Buffer;
 
 import { initLoginModal, showLoginModal } from './ui/loginModal.js';
-import { showEncryptionTest } from './ui/encryptionTest.js';
 import { showGroupsModal } from './ui/groupsModal.js';
-import { showUploadModal } from './ui/uploadModal.js';
 import { showContentBrowser } from './ui/contentBrowser.js';
 import { showRecoveryDialog } from './ui/recoveryDialog.js';
 import { showStorageWarning } from './ui/storageWarning.js';
@@ -40,7 +38,6 @@ const recordingsDrawer = document.getElementById('recordings-drawer');
 const drawerBackdrop = document.getElementById('drawer-backdrop');
 const drawerHandle = document.getElementById('drawer-handle');
 const logoutBtn = document.getElementById('logout-btn');
-const encryptionTestBtn = document.getElementById('encryption-test-btn');
 const registrationContainer = document.getElementById('registration-container');
 
 // State
@@ -471,16 +468,7 @@ const groupsBtn = document.getElementById('groups-btn');
 if (groupsBtn) {
     groupsBtn.addEventListener('click', () => {
         closeDrawer();
-        showGroupsModal();
-    });
-}
-
-// Upload button handler
-const uploadBtnDrawer = document.getElementById('upload-btn-drawer');
-if (uploadBtnDrawer) {
-    uploadBtnDrawer.addEventListener('click', () => {
-        closeDrawer();
-        showUploadModal();
+        showGroupsModal({ onClose: openDrawer });
     });
 }
 
@@ -489,22 +477,16 @@ const evidenceBtn = document.getElementById('evidence-btn');
 if (evidenceBtn) {
     evidenceBtn.addEventListener('click', () => {
         closeDrawer();
-        showContentBrowser();
+        showContentBrowser({ onClose: openDrawer });
     });
 }
-
-// Encryption test button handler
-encryptionTestBtn.addEventListener('click', () => {
-    closeDrawer();
-    showEncryptionTest();
-});
 
 // Settings button handler
 const settingsBtn = document.getElementById('settings-btn');
 if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
         closeDrawer();
-        showSettingsModal();
+        showSettingsModal({ onClose: openDrawer });
     });
 }
 

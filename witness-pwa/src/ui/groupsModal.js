@@ -10,6 +10,7 @@ import { generateQRDataURL } from '../lib/qrcode.js';
 let modal = null;
 let currentView = 'list'; // 'list' | 'create' | 'invite'
 let selectedGroupId = null;
+let onCloseCallback = null;
 
 /**
  * Create the modal HTML structure
@@ -247,7 +248,9 @@ function escapeHtml(str) {
 /**
  * Show the groups modal
  */
-export function showGroupsModal() {
+export function showGroupsModal(options = {}) {
+  onCloseCallback = options.onClose || null;
+
   if (!modal) {
     modal = createModal();
     document.body.appendChild(modal);
@@ -292,6 +295,9 @@ export function showGroupsModal() {
 export function hideGroupsModal() {
   if (modal) {
     modal.classList.add('hidden');
+  }
+  if (onCloseCallback) {
+    onCloseCallback();
   }
 }
 

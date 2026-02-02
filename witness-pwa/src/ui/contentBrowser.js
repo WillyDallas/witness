@@ -11,6 +11,7 @@ let modal = null;
 let currentFilter = 'all'; // 'all', 'personal', or a groupId
 let discoveredContent = null;
 let groupNames = {};
+let onCloseCallback = null;
 
 /**
  * Create the modal HTML structure
@@ -217,7 +218,9 @@ function escapeHtml(str) {
 /**
  * Show the content browser modal
  */
-export function showContentBrowser() {
+export function showContentBrowser(options = {}) {
+  onCloseCallback = options.onClose || null;
+
   if (!modal) {
     modal = createModal();
     document.body.appendChild(modal);
@@ -242,6 +245,9 @@ export function showContentBrowser() {
 export function hideContentBrowser() {
   if (modal) {
     modal.classList.add('hidden');
+  }
+  if (onCloseCallback) {
+    onCloseCallback();
   }
 }
 

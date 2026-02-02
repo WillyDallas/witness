@@ -9,6 +9,7 @@ import { getDefaultGroupIds, setDefaultGroupIds } from '../lib/settingsStorage.j
 import { showGroupsModal } from './groupsModal.js';
 
 let modal = null;
+let onCloseCallback = null;
 
 /**
  * Create the modal HTML
@@ -123,7 +124,9 @@ function handleSave() {
 /**
  * Show the settings modal
  */
-export async function showSettingsModal() {
+export async function showSettingsModal(options = {}) {
+    onCloseCallback = options.onClose || null;
+
     if (!modal) {
         modal = createModal();
         document.body.appendChild(modal);
@@ -160,5 +163,8 @@ export async function showSettingsModal() {
 export function hideSettingsModal() {
     if (modal) {
         modal.classList.add('hidden');
+    }
+    if (onCloseCallback) {
+        onCloseCallback();
     }
 }

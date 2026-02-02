@@ -294,12 +294,31 @@ function detectVideoMimeType(data) {
 }
 
 /**
- * Check if manifest represents chunked content
+ * Check if manifest represents chunked content (new streaming format)
  * @param {object} manifest - Content manifest
- * @returns {boolean} True if multi-chunk content
+ * @returns {boolean} True if content uses chunked streaming format
  */
 export function isChunkedContent(manifest) {
-  return manifest.chunks && manifest.chunks.length > 1;
+  // New streaming format has per-chunk IVs stored in each chunk
+  // Legacy format has a single global IV in manifest.encryption.iv
+  // Check for new format indicators: chunks with per-chunk IV or missing global encryption.iv
+  if (!manifest.chunks || manifest.chunks.length === 0) {
+    return false;
+  }
+
+  // If first chunk has its own IV, it's new chunked format
+  const firstChunk = manifest.chunks[0];
+  if (firstChunk.iv) {
+    return true;
+  }
+
+  // If there's no global encryption.iv, assume new format
+  if (!manifest.encryption?.iv) {
+    return true;
+  }
+
+  // Legacy format with global IV - use legacy decryption
+  return false;
 }
 
 /**
