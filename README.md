@@ -27,43 +27,58 @@ Evidence is only as credible as the witnesses who can vouch for it. Witness Prot
 - ✅ Content discovery and decryption for group members
 - ✅ Anonymous attestations using Semaphore V4 ZK proofs
 
-**In Progress**:
-- 🔄 Chunked video streaming with live merkle tree updates
-- 🔄 Enhanced recording UI with visual feedback
-- 🔄 Improved playback for chunked content
+**Possible Next Directions**:
+- Matrix server as data streaming, caching, processing, and notification layer
+- zkDID and credential linking (without account linking) for attestations
+- Native iOS and Android App
+- Numbers Protocol Deployment for enhanced data provenance 
+
 
 **Live Demo:** https://witness.squirrlylabs.xyz
 
 ## 📁 Project Structure
 
 ```
-witness-pwa/                    # Main PWA application
-├── src/
-│   ├── services/              # Core services (auth, encryption, storage, etc.)
-│   ├── modals/                # UI modals (login, groups, content detail)
-│   └── app.js                 # Main application controller
-├── contracts/                 # WitnessRegistry.sol (Base Sepolia)
-└── public/                    # Static assets + manifest
-
-docs/
-├── architecture/              # System architecture documentation
-│   ├── README.md             # High-level overview
-│   ├── anonymous-attestations.md
-│   ├── encryption-key-derivation.md
-│   ├── content-storage.md
-│   └── cryptographic-architecture.md
-├── planning/                  # Vision and architecture docs
-│   ├── witness-protocol-architecture-v3.md  # Current architecture
-│   └── plan archive/         # Historical planning docs
-├── plans/
-│   ├── Shipped/              # Completed implementation plans (Phases 0-7)
-│   └── Current/              # In-progress milestone plans
-├── research/                  # Technology research
-│   ├── general/
-│   ├── video-storage-and-transport/
-│   └── Wallet-creation-paymaster-zkdid/
-├── front-end/                # UI/UX documentation
-└── testing/                  # Test plans and results
+/
+├── witness-pwa/               # Main PWA application
+│   ├── src/
+│   │   ├── services/         # Core services (auth, encryption, storage, etc.)
+│   │   ├── modals/           # UI modals (login, groups, content detail)
+│   │   └── app.js            # Main application controller
+│   ├── public/               # Static assets + manifest
+│   └── package.json
+│
+├── contracts/                # Smart contracts (Foundry)
+│   ├── src/
+│   │   └── WitnessRegistry.sol
+│   ├── script/
+│   │   └── DeployWitnessRegistry.s.sol
+│   └── broadcast/            # Deployment artifacts
+│
+├── docs/
+│   ├── architecture/         # System architecture documentation
+│   │   ├── README.md        # High-level overview
+│   │   ├── anonymous-attestations.md
+│   │   ├── encryption-key-derivation.md
+│   │   ├── content-storage.md
+│   │   └── cryptographic-architecture.md
+│   ├── planning/            # Vision and architecture docs
+│   │   ├── witness-protocol-architecture-v3.md
+│   │   └── plan archive/    # Historical planning docs
+│   ├── plans/
+│   │   ├── Shipped/         # Completed implementation plans (Phases 0-7)
+│   │   └── Current/         # In-progress milestone plans
+│   ├── research/            # Technology research
+│   │   ├── general/
+│   │   ├── video-storage-and-transport/
+│   │   └── Wallet-creation-paymaster-zkdid/
+│   ├── front-end/           # UI/UX documentation
+│   └── testing/             # Test plans and results
+│
+├── deploy.sh                # Automated deployment script
+├── .env                     # Environment configuration
+├── CLAUDE.md                # Project context for Claude Code
+└── README.md
 ```
 
 ## 🛠 Tech Stack
