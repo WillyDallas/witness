@@ -108,7 +108,17 @@ Evidence is only as credible as the witnesses who can vouch for it. Witness Prot
    # Edit .env with your API keys
    ```
 
-3. **Run dev server**:
+3. **Contract setup** (required for on-chain features):
+
+   The app requires a deployed WitnessRegistry contract. You can either:
+   - **Use the existing contract**: The default config points to our deployed contract on Base Sepolia ([`0x99b952eba38d1a0d681d258a61be2ee17b49c992`](https://sepolia.basescan.org/address/0x99b952eba38d1a0d681d258a61be2ee17b49c992))
+   - **Deploy your own**: See [Smart Contract](#-smart-contract) section below
+
+   **Important**: Set `VITE_CONTRACT_DEPLOYED_BLOCK` in your `.env` to the block number when the contract was deployed. This limits how much blockchain history the RPC must scan for events—without it, queries start from block 0 and will be slow or fail.
+
+   Without a valid contract, user registration, group creation, content commits, and attestations will fail.
+
+4. **Run dev server**:
    ```bash
    npm run dev
    # Open http://localhost:5173
@@ -145,7 +155,7 @@ Service worker updates propagate automatically. For PWA home screen apps, users 
 - Content commitment (merkle roots + manifest CIDs)
 - Anonymous attestation verification
 
-**Deployed Address**: [`0xd68f0B67c158a1e862Fe7fAc0d58302D21220b78`](https://sepolia.basescan.org/address/0xd68f0B67c158a1e862Fe7fAc0d58302D21220b78)
+**Deployed Address**: [`0x99b952eba38d1a0d681d258a61be2ee17b49c992`](https://sepolia.basescan.org/address/0x99b952eba38d1a0d681d258a61be2ee17b49c992)
 
 ### Deploy Contract
 
