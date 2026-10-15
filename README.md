@@ -1,5 +1,7 @@
 # Witness Protocol
 
+> **Archived, October 2026.** This is the February 2026 hackathon prototype, kept for reference only. Don't deploy it or use it for real evidence: an October 2026 security audit found it publishes where and when recordings were made and can silently lose footage. Witness is being rebuilt from scratch as a native Android app in a new repository.
+
 **Privacy-Preserving Evidence Capture with Web of Trust**
 
 An open-source personal safety toolkit that enables secure video evidence capture, encrypted storage, and anonymous verification through trusted contacts.
